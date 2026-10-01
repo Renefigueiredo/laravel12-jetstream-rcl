@@ -1,23 +1,30 @@
 <!--
 Sync Impact Report
-- Version change: 1.3.1 → 1.4.0
+- Version change: 1.4.0 → 1.5.0
 - Modified principles:
-  - I. Laravel 12 First → I. Laravel 12 First
-  - II. Reactive UI via Livewire 4 + Filament → II. Reactive UI via Livewire 4 + Filament
-  - III. Test-First Delivery (NON-NEGOTIABLE) → III. Test-First Delivery (NON-NEGOTIABLE)
-  - IV. PostgreSQL Data Integrity → IV. PostgreSQL Data Integrity
-  - V. Boost-Guided, Minimal Changes → V. Boost-Guided, Minimal Changes
-  - VI. Production-Ready Integrations → VI. Production-Ready Integrations
+  - IV. PostgreSQL Data Integrity → IV. PostgreSQL Data Integrity (production on Supabase Cloud;
+    aggregation in the database; transactions; money as integer cents)
+  - VI. Production-Ready Integrations → VI. Production-Ready Integrations (interfaces for external
+    sources, private file storage, no AI/LLM integration)
+- Added principles:
+  - VII. Auditability & Traceability (NON-NEGOTIABLE)
+  - VIII. Single-Company Access Control
 - Added sections:
-  - None
+  - Product Scope (inside Technology Stack Constraints)
 - Removed sections:
   - None
-- Templates requiring updates:
-  - ✅ updated: .specify/templates/plan-template.md
-  - ✅ updated: .specify/templates/spec-template.md
-  - ⚠ pending: .specify/templates/commands/*.md (directory not present in repository)
+- Stack changes:
+  - Removed: Laravel AI (product does not use AI)
+  - Changed: PostgreSQL → PostgreSQL on Supabase Cloud (paid, managed) in production
 - Follow-up TODOs:
-  - None
+  - TODO(HORIZON): Principle VI requires Horizon, but laravel/horizon is not installed and
+    TECH_STACK.md records QUEUE_CONNECTION=database. Decide: install Horizon (needs Redis and
+    dependency approval) or amend Principle VI.
+  - TODO(DEV_DATABASE): TECH_STACK.md keeps SQLite as the dev default. Decide whether dev and
+    tests move to PostgreSQL to match production.
+  - TODO(PRODUCTION_HOST): where the production application runs is undecided.
+  - TODO(PROJECT_NAME): title still carries the starter-kit name; the product has no name yet.
+  - laravel/ai remains in composer.json; removal requires dependency approval.
 -->
 
 # Laravel12JetstreamStarter Constitution
@@ -28,7 +35,9 @@ Sync Impact Report
 All backend implementation MUST follow Laravel 12 conventions and native framework patterns.
 Routing, middleware, exceptions, and console configuration MUST use `bootstrap/app.php` and
 `routes/console.php` as applicable. Features MUST prefer Eloquent relationships, Form Requests,
-policies, named routes, and framework commands over custom infrastructure.
+policies, named routes, and framework commands over custom infrastructure. Business rules MUST live
+in dedicated Action/Service classes; routes, controllers, and components only delegate. Statuses
+and other fixed values MUST be PHP Enums, never free-text strings.
 
 Rationale: Reduces accidental complexity and keeps the codebase aligned with maintainable Laravel
 standards.
@@ -39,6 +48,9 @@ Jetstream base template and its established UI patterns. Livewire components MUS
 server-driven state, validation, authorization, and lifecycle hook conventions. Administrative and
 data-heavy UIs MUST use Filament Forms and Filament Tables before custom alternatives are
 introduced. Styling MUST use Tailwind CSS v4 utilities and existing project design tokens.
+User-facing text MUST come from translation files (pt-BR), and list filters MUST be persisted in
+the URL so a filtered view can be shared. Screens MUST meet WCAG contrast, keyboard, and
+screen-reader requirements.
 
 Rationale: Enforces a single, consistent UI architecture and prevents fragmented frontend patterns.
 
@@ -46,15 +58,24 @@ Rationale: Enforces a single, consistent UI architecture and prevents fragmented
 Every behavioral change MUST be covered by automated tests. Work MUST follow a red-green-refactor
 cycle: write or update a failing test first, implement, then pass. Feature-level behavior MUST be
 validated in PHPUnit Feature tests; unit tests MUST be used for isolated domain logic.
+Reconciliation rules (matching, tolerances, installments) MUST have tests for matching,
+non-matching, and boundary cases. Tests MUST use fakes for external integrations and MUST NOT
+touch production data.
 
 Rationale: Prevents regressions and keeps delivery confidence high while evolving the system.
 
 ### IV. PostgreSQL Data Integrity
-Persistent data MUST target PostgreSQL. Schema changes MUST be shipped through Laravel migrations,
-with explicit constraints, indexes, and foreign keys where applicable. Data access MUST prefer
-Eloquent/query builder and MUST avoid bypassing model integrity rules.
+Production data MUST live in PostgreSQL on Supabase Cloud (paid, managed plan), used strictly as
+a database through Laravel's `pgsql` connection. Schema changes MUST be shipped through Laravel
+migrations that run on PostgreSQL, with explicit constraints, indexes, and foreign keys. Data
+access MUST prefer Eloquent/query builder and MUST avoid bypassing model integrity rules.
+Monetary values MUST be stored as integer cents and formatted in a single place; timestamps MUST
+be stored in UTC. Totals and aggregations MUST be computed in the database, not by summing
+collections in PHP. Operations that change more than one financial record MUST run inside a
+database transaction. Non-production environments MUST NOT connect to the production database.
 
-Rationale: Protects data correctness and performance while keeping migrations auditable.
+Rationale: The product exists to eliminate cent-level discrepancies; data correctness is the
+product, and migrations keep schema changes auditable.
 
 ### V. Boost-Guided, Minimal Changes
 For Laravel ecosystem decisions, implementation MUST consult Laravel Boost documentation search
@@ -67,13 +88,47 @@ Rationale: Ensures version-correct implementation choices and reduces risk from 
 
 ### VI. Production-Ready Integrations
 Background processing MUST use Laravel queues with Horizon for monitoring and operations. Outbound
-HTTP calls MUST use Laravel's native HTTP client. Feature flags, integrations, and environment-
-specific customization MUST be configured via environment variables and surfaced through config
-files, never hard-coded or stored directly in source control.
+HTTP calls MUST use Laravel's native HTTP client. External data sources (spreadsheet, statement,
+or ERP formats) MUST be accessed behind an application-owned interface so a source can be replaced
+without changing reconciliation rules. Imports and confirmations MUST be idempotent: submitting
+the same file or action twice MUST NOT duplicate financial records. Uploaded files MUST be stored
+on the private disk, outside the public directory, and served only through authorized routes; the
+folder MUST have its own off-server backup. Failure of an external service MUST NOT block
+reconciliation or consultation. The product MUST NOT integrate AI/LLM services; reconciliation is
+deterministic. Feature flags, integrations, and environment-specific customization MUST be
+configured via environment variables and surfaced through config files, never hard-coded or stored
+directly in source control. Logs MUST NOT contain secrets, bank data, or supplier tax identifiers.
 
-Rationale: Standardizes integrations for reliability, visibility, and secure configuration.
+Rationale: Standardizes integrations for reliability, visibility, and secure configuration, and
+avoids recurring AI cost for the client.
+
+### VII. Auditability & Traceability (NON-NEGOTIABLE)
+Every reconciliation, adjustment, and divergence resolution MUST record who performed it, when,
+the previous value, and the new value. Audit records MUST NOT be editable or deletable through the
+application. Users MUST NOT be hard-deleted; they are deactivated so audit records keep pointing
+to the person who acted. Imported files and the raw imported rows MUST be retained as audit
+evidence. Records referenced by the audit trail MUST be protected by foreign keys.
+
+Rationale: Total traceability and audit compliance are the core benefit promised to the finance
+team; a broken trail invalidates the product.
+
+### VIII. Single-Company Access Control
+The system serves a single company. An operating unit is a regular record, not a tenant; access
+to units MUST be granted per user through permissions, and finance users MUST be able to work
+across the units they are permitted to see. Jetstream Teams MUST NOT be used to model units.
+Public self-registration MUST be disabled; only an administrator creates users. Every action on a
+resource MUST be authorized through policies that check the user's permission for that unit.
+Two-factor authentication and login rate limiting MUST remain enabled.
+
+Rationale: Reconciliation crosses units, so tenant isolation would block the core workflow, while
+an internal financial system must not accept unknown users.
 
 ## Technology Stack Constraints
+
+Product scope: an internal web system for the finance, accounting, and controllership team that
+cross-checks, validates, and reconciles purchase authorizations against actual payment records
+across multiple operating units, including installments and divergences. It does not process
+payments, issue invoices, or bill users.
 
 The canonical application stack is:
 - Laravel 12
@@ -81,13 +136,17 @@ The canonical application stack is:
 - Livewire 4
 - Filament Forms + Filament Tables
 - Tailwind CSS 4
-- PostgreSQL
-- Laravel Jetstream
-- Laravel Boost + Laravel AI
+- PostgreSQL on Supabase Cloud (production)
+- Laravel Jetstream + Fortify
+- Laravel Boost
 - PHPUnit
 - Laravel Horizon
 - Laravel HTTP Client
 - Laravel Pennant
+
+`TECH_STACK.md` at the repository root records the detailed technical decisions and their reasons
+and is the runtime guidance file. If it conflicts with this constitution, the constitution prevails
+and `TECH_STACK.md` MUST be corrected.
 
 Any proposal that introduces an additional framework for a capability already covered by this stack
 MUST include written justification and explicit approval before implementation.
@@ -98,14 +157,16 @@ MUST include written justification and explicit approval before implementation.
    principles.
 2. Constitution check gates in planning MUST pass before implementation begins and MUST be
    re-validated after design.
-3. Pull requests MUST document: scope, tests executed, migration impact, and principle compliance.
-4. New endpoints, workflows, or UI paths MUST include test coverage for both happy paths and
+3. Changes MUST reach the main branch through a reviewed pull request; commit messages MUST follow
+   the Conventional Commits format.
+4. Pull requests MUST document: scope, tests executed, migration impact, and principle compliance.
+5. New endpoints, workflows, or UI paths MUST include test coverage for both happy paths and
    relevant failure paths.
-5. Formatting and static quality tooling configured by the repository MUST run on changed files
+6. Formatting and static quality tooling configured by the repository MUST run on changed files
    before finalization.
-6. Migration files MUST be named in English and follow Laravel's migration naming conventions.
-7. When creating a new screen or interface, clarifying questions MUST ask the user for their
-  desired UI direction before implementation.
+7. Migration files MUST be named in English and follow Laravel's migration naming conventions.
+8. When creating a new screen or interface, clarifying questions MUST ask the user for their
+   desired UI direction before implementation.
 
 ## Governance
 
@@ -127,4 +188,4 @@ Compliance Review Expectations:
 - Every task list MUST include explicit testing tasks.
 - Every pull request review MUST verify constitutional compliance prior to approval.
 
-**Version**: 1.4.0 | **Ratified**: 2026-02-19 | **Last Amended**: 2026-02-19
+**Version**: 1.5.0 | **Ratified**: 2026-02-19 | **Last Amended**: 2026-10-01
