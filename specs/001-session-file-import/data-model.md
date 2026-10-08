@@ -168,12 +168,16 @@ relatório de erros. Linhas encerradas são apagadas pelo comando agendado.
 | `disk`, `path` | string | arquivo recebido, ainda não definitivo |
 | `size_bytes`, `sha256` | bigint, char(64) | |
 | `progress` | smallint | 0 a 100 |
+| `sheet_count` | smallint nulo | quantidade de abas, copiada para o arquivo aceito |
+| `missing_columns` | json nulo | colunas opcionais do layout não encontradas |
 | `rows_total`, `rows_valid`, `rows_skipped_value`, `rows_out_of_period` | integer nulo | resultado da validação |
 | `min_date`, `max_date` | date nulo | |
 | `error_count` | integer | |
 | `first_errors` | json nulo | até 10 erros: linha, coluna, valor, motivo (FR-018) |
 | `error_report_path` | string nulo | relatório completo (FR-019) |
 | `message` | string nulo | motivo de recusa que não é por linha (tipo, tamanho, cabeçalho, vazio) |
+| `divergence_confirmed_by` | FK `users` nulo | quem confirmou a divergência de período |
+| `divergence_confirmed_at` | timestamp nulo | |
 | `import_file_id` | FK nulo | preenchido quando aceita |
 | `created_at`, `updated_at` | timestamps | |
 

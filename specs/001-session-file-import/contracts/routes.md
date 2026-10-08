@@ -23,7 +23,9 @@ Regras:
 - `{layout}` aceita `autorizacoes` e `pagamentos`; outro valor, 404.
 - Sessão inexistente: 404 em rota HTTP; em ação Livewire, aviso "Sessão não encontrada" e
   redirecionamento para `sessions.index`.
-- Filtros de `sessions.index` ficam na URL: `?periodo=05/2026&situacao=processed`.
+- Filtros de `sessions.index` ficam na URL, no formato das tabelas do Filament:
+  `?periodo=05/2026&situacao[status][value]=processed`. O filtro de `sessions.history` usa
+  `?filtro[action][value]=session_deleted`.
 
 ## Ações Livewire
 
@@ -33,6 +35,7 @@ no servidor.
 | Componente | Ação | Entrada | Resultado | Recusas |
 |------------|------|---------|-----------|---------|
 | `Sessions\Index` | criar sessão | período `MM/AAAA`; confirmação se o período já tem sessão | sessão `Open`; redireciona ao painel | período inválido ou futuro |
+| `Sessions\Index` | excluir (ação da linha) | confirmação | sessão apagada; auditoria | sessão já processada alguma vez; sessão `Processing` |
 | `Sessions\Show` | enviar planilha | cartão, arquivo | tentativa `Queued`; cartão mostra progresso | sessão não `Open`; tipo ou tamanho; mesmo arquivo no outro cartão de pagamentos |
 | `Sessions\Show` | confirmar divergência | tentativa | tentativa `Persisting`; auditoria | tentativa não `AwaitingConfirmation`; sessão não `Open` |
 | `Sessions\Show` | cancelar divergência | tentativa | tentativa `Cancelled`; arquivo descartado | |

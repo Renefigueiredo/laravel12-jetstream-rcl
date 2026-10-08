@@ -269,6 +269,37 @@ Filament 5 e OpenSpout estão marcadas com **[verificar no Boost]** e devem ser 
   travada para sempre.
 - **Alternatives considered**: botão manual de destravar (exige alguém perceber o problema).
 
+## R23. Conferência no Laravel Boost e no código instalado (T006)
+
+- **OpenSpout 4.32**: o leitor CSV aceita `FIELD_DELIMITER` e `ENCODING` (converte para UTF-8); o
+  leitor XLSX com `SHOULD_FORMAT_DATES = false` devolve células de data como `DateTimeImmutable`,
+  desde que a célula tenha formato de data. `SHOULD_PRESERVE_EMPTY_ROWS = true` mantém o número
+  da linha igual ao do arquivo. Confirmado no código em `vendor/openspout` e pelos testes.
+- **Livewire 4.2**: páginas são registradas com `Route::livewire()`. O projeto usa componentes de
+  classe (`make:livewire --class`) em `app/Livewire`, com a view em `resources/views/livewire`.
+  O layout padrão é `layouts::app`, o mesmo do Jetstream. A variável `$slots` é reservada nas
+  views de componente; por isso o painel usa `$importSlots`. Confirmado no `search-docs`.
+- **Filament 5.3 fora de painel**: o componente implementa `HasTable`, `HasActions` e
+  `HasSchemas` com os traits `InteractsWith*`; a view chama `{{ $this->table }}` e
+  `<x-filament-actions::modals />`; o layout recebe `@filamentStyles` e `@filamentScripts`; o
+  `app.css` importa os estilos dos pacotes. Busca e filtros vão para a URL redeclarando
+  `$tableSearch` e `$tableFilters` com `#[Url]`, com a mesma assinatura dos traits. O Filament
+  não está no índice do `search-docs`; conferido no código e na documentação em `vendor/filament`.
+- **Limite de envio**: `config/livewire.php` foi publicado e a regra do arquivo temporário lê
+  `CONCILIATION_UPLOAD_MAX_SIZE_MB`.
+
+## R24. Decisões tomadas durante a implementação
+
+- **Telas no padrão do Jetstream**: os modais de nova sessão e de confirmação usam os componentes
+  Blade do Jetstream (`x-dialog-modal`, `x-confirmation-modal`) e os avisos usam o `x-banner`. As
+  listas usam Filament Tables.
+- **Menu sem time**: o menu do Jetstream supunha que todo usuário tem um time atual. Como os
+  usuários agora são criados sem time, o seletor de times só aparece para quem tem um.
+- **Validação e erros desde a US1**: o validador já nasce com a coleta de erros e a contagem de
+  datas fora do período; as US2 e US3 acrescentaram apenas telas, ações e testes.
+- **Tipo e tamanho recusados antes da fila**: arquivo de tipo não aceito ou acima do limite é
+  recusado na hora, com mensagem no cartão, sem criar tentativa.
+
 ## Pendências que dependem do responsável
 
 | # | Assunto | Efeito no plano |

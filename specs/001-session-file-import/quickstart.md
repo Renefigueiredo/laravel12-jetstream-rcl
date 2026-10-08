@@ -76,6 +76,7 @@ vendor/bin/pint --dirty --format agent
 | `tests/Feature/Conciliation/DeleteSessionTest.php` | excluir, recusas, espaço liberado, auditoria que sobrevive |
 | `tests/Feature/Conciliation/AuditLogTest.php` | somente acréscimo, conteúdo por ação |
 | `tests/Feature/Conciliation/SessionAuthorizationTest.php` | papéis, visitante, histórico só para Administrador |
+| `tests/Feature/Conciliation/SessionPanelTest.php` | painel com os três cartões, avisos e sessão excluída em outra aba |
 | `tests/Feature/Conciliation/SessionHistoryTest.php` | histórico de exclusões e reaberturas |
 | `tests/Feature/Conciliation/SpreadsheetReaderTest.php` | leitura de .xlsx e .csv, delimitador e codificação |
 | `tests/Feature/Conciliation/SpreadsheetTemplateTest.php` | planilhas modelo |
