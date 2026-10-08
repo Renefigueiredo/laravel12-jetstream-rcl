@@ -2,16 +2,18 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserPermission;
 use App\Enums\UserRole;
 use App\Models\Team;
 use App\Models\User;
+use App\Models\UserPermissionGrant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Laravel\Jetstream\Features;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
+ * @extends Factory<User>
  */
 class UserFactory extends Factory
 {
@@ -48,6 +50,19 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'role' => UserRole::Administrador,
         ]);
+    }
+
+    /**
+     * Indicate that the user was granted a permission beyond the role.
+     */
+    public function withPermission(UserPermission $permission): static
+    {
+        return $this->afterCreating(function (User $user) use ($permission): void {
+            UserPermissionGrant::factory()->create([
+                'user_id' => $user->id,
+                'permission' => $permission,
+            ]);
+        });
     }
 
     /**

@@ -3,8 +3,11 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserPermission;
 use App\Enums\UserRole;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -16,7 +19,7 @@ class User extends Authenticatable
 {
     use HasApiTokens;
 
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory;
 
     use HasProfilePhoto;
@@ -64,6 +67,26 @@ class User extends Authenticatable
     protected $attributes = [
         'role' => 'operador',
     ];
+
+    /**
+     * @return HasMany<UserPermissionGrant, $this>
+     */
+    public function permissionGrants(): HasMany
+    {
+        return $this->hasMany(UserPermissionGrant::class);
+    }
+
+    /**
+     * An administrator has every permission; other users need a grant.
+     */
+    public function hasPermission(UserPermission $permission): bool
+    {
+        if ($this->role === UserRole::Administrador) {
+            return true;
+        }
+
+        return $this->permissionGrants()->where('permission', $permission)->exists();
+    }
 
     /**
      * Get the attributes that should be cast.

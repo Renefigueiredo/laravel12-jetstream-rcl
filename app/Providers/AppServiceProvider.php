@@ -4,9 +4,13 @@ namespace App\Providers;
 
 use App\Contracts\ReconciliationResultInspector;
 use App\Contracts\SpreadsheetReader;
+use App\Enums\UserPermission;
 use App\Enums\UserRole;
+use App\Models\ExcludedCodeImport;
+use App\Models\ExcludedOperationCode;
 use App\Models\ReconciliationSession;
 use App\Models\User;
+use App\Models\UserPermissionGrant;
 use App\Services\Import\NullReconciliationResultInspector;
 use App\Services\Import\OpenSpoutSpreadsheetReader;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -31,9 +35,13 @@ class AppServiceProvider extends ServiceProvider
     {
         Relation::morphMap([
             'reconciliation_session' => ReconciliationSession::class,
+            'excluded_operation_code' => ExcludedOperationCode::class,
+            'excluded_code_import' => ExcludedCodeImport::class,
+            'user_permission' => UserPermissionGrant::class,
         ]);
 
         Gate::define('view-session-history', fn (User $user): bool => $user->role === UserRole::Administrador);
+        Gate::define('manage-excluded-codes', fn (User $user): bool => $user->hasPermission(UserPermission::ManageExcludedCodes));
 
         seo()
             ->site('Promovaweb')

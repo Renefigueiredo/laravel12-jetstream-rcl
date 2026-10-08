@@ -25,6 +25,12 @@
                             {{ __('conciliation.sessions.history.nav') }}
                         </x-nav-link>
                     @endcan
+
+                    @can('manage-excluded-codes')
+                        <x-nav-link href="{{ route('excluded-codes.index') }}" :active="request()->routeIs('excluded-codes.index')">
+                            {{ __('conciliation.excluded_codes.nav') }}
+                        </x-nav-link>
+                    @endcan
                 </div>
             </div>
 
@@ -160,6 +166,12 @@
             @can('view-session-history')
                 <x-responsive-nav-link href="{{ route('sessions.history') }}" :active="request()->routeIs('sessions.history')">
                     {{ __('conciliation.sessions.history.nav') }}
+                </x-responsive-nav-link>
+            @endcan
+
+            @can('manage-excluded-codes')
+                <x-responsive-nav-link href="{{ route('excluded-codes.index') }}" :active="request()->routeIs('excluded-codes.index')">
+                    {{ __('conciliation.excluded_codes.nav') }}
                 </x-responsive-nav-link>
             @endcan
         </div>
