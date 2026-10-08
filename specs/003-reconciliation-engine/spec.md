@@ -43,6 +43,18 @@
 - Q: O que o motor assume do Módulo 5, já entregue? → A: O pagamento excluído por código não pode
   ser vinculado manualmente, e a execução guarda os códigos vigentes e a quantidade de pagamentos
   excluídos por código (FR-020 a FR-023, SC-001 e SC-007 da spec do Módulo 5).
+- Q: Os quatro dígitos do cartão, presentes na autorização e na espécie do pagamento, devem ser
+  usados? → A: Sim. Entre candidatos empatados vence o do mesmo cartão, e cartão diferente impede
+  o vínculo automático: o par vai para o Operador como Dúbio, com o aviso "Cartão diferente". A
+  tela ganha uma aba "Por cartão" e o filtro por cartão.
+- Q: Um pagamento de cartão com código de operação excluído entra na conciliação? → A: Não. Todo
+  pagamento com código excluído fica fora, qualquer que seja a forma de pagamento.
+- Q: A lista padrão de pendências mostra os pagamentos "Sem autorização"? → A: Não. Eles ficam
+  na aba Fila de investigação e no filtro "Sem autorização"; a lista padrão mostra o que envolve
+  autorização, inclusive as autorizações com saldo em aberto.
+- Q: Que categorias de justificativa valem para desconto e acréscimo aceito? → A: Desconto
+  comercial, juros ou multa, frete, reajuste de preço, arredondamento e outro, sempre com o texto
+  da justificativa.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -123,6 +135,16 @@ e conferir que cada item caiu na classificação esperada e que o resumo bate co
     vê quais códigos estavam na lista naquele momento e quantos pagamentos cada um excluiu.
 22. **Given** um pagamento cujo código difere de um código da lista apenas por espaços no início
     ou no fim, **When** a conciliação é executada, **Then** o pagamento é excluído.
+23. **Given** uma autorização do cartão 0798 e dois pagamentos empatados na maior nota, um da
+    fatura do cartão 0798 e outro da fatura do cartão 4931, **When** a conciliação é executada,
+    **Then** o pagamento do cartão 0798 é o escolhido e o par é conciliado automaticamente.
+24. **Given** uma autorização do cartão 0798 e um único pagamento compatível, da fatura do cartão
+    4931, **When** a conciliação é executada, **Then** nenhum vínculo automático é feito e o par
+    fica "Dúbio" com o aviso "Cartão diferente".
+25. **Given** uma autorização do cartão 7607 e um pagamento com espécie "FATURA CARTAO 7607
+    (7613)", **When** a conciliação é executada, **Then** os cartões são considerados iguais.
+26. **Given** uma autorização do cartão 0798 e um único pagamento compatível que não vem de fatura
+    de cartão, **When** a conciliação é executada, **Then** o par é conciliado normalmente.
 
 ---
 
@@ -142,8 +164,9 @@ e buscar um fornecedor.
 **Acceptance Scenarios**:
 
 1. **Given** uma sessão processada, **When** o Operador abre a tela de conciliação, **Then** vê
-   apenas os itens Dúbios, Parciais, Excedentes, Sem pagamento e Sem autorização, cada um com a
-   autorização à esquerda e o pagamento à direita.
+   apenas os itens Dúbios, Parciais, Excedentes, Sem pagamento e Saldo em aberto, cada um com a
+   autorização à esquerda e o pagamento à direita. Os pagamentos Sem autorização ficam na aba
+   Fila de investigação e aparecem na lista quando o filtro "Sem autorização" é escolhido.
 2. **Given** a lista de pendências, **When** o Operador escolhe o filtro "Dúbios", "Parciais",
    "Excedentes", "Sem pagamento" ou "Sem autorização", **Then** a lista mostra só aquele tipo, e
    o filtro "Todos" volta a mostrar tudo.
@@ -424,6 +447,14 @@ conferir que só a primeira exige confirmação.
   pagamentos para uma autorização e entre autorizações para um pagamento (FR-012a).
 - **Pagamento anterior à autorização**: nunca é vinculado sozinho; vai para o Operador com o aviso
   e aparece na aba própria. Vale também para o vínculo automático de parcela.
+- **Cartão diferente**: nunca é vinculado sozinho; vai para o Operador com o aviso. Vale também
+  para o vínculo automático de parcela.
+- **Fatura de cartão sem nenhuma autorização na sessão** (caso real: cartão 7222): o cartão
+  aparece na aba "Por cartão" só com as linhas de fatura.
+- **Autorização de cartão paga por outro meio** (boleto, PIX): não há cartão do lado do
+  pagamento, então a regra de cartão diferente não se aplica.
+- **Compra de cartão com código de operação excluído**: fica fora da conciliação como qualquer
+  outro pagamento excluído; a autorização correspondente, se existir, fica "Sem pagamento".
 - **Um pagamento compatível com várias autorizações**: vale a mesma regra; um pagamento nunca é
   vinculado automaticamente a mais de uma autorização.
 - **Nota exatamente no limite**: nota 90 concilia automaticamente; nota 60 é Dúbio; abaixo de 60
@@ -452,6 +483,14 @@ conferir que só a primeira exige confirmação.
   o registra como acréscimo aceito, se couber no teto.
 - **Acréscimo exatamente no teto**: é aceito; acima do teto, não.
 - **Teto de acréscimo alterado depois da decisão**: as decisões já tomadas não mudam.
+- **Autorização "Parcial" sem novo pagamento**: aparece na lista como "Saldo em aberto", onde o
+  Operador pode encerrá-la com desconto ou vinculá-la a outro pagamento.
+- **Desvincular um par**: as sugestões que haviam sido descartadas por causa daquele vínculo
+  voltam a ficar pendentes, se a autorização e o pagamento estiverem livres; o par desvinculado
+  não volta a ser sugerido.
+- **Decisão depois de a tolerância mudar**: confirmações e vínculos manuais usam a tolerância da
+  execução vigente da sessão do pagamento; só o teto de acréscimo usa o valor vigente no momento
+  da decisão.
 - **Desconto em autorização com vários pagamentos**: o desconto é sempre o saldo restante no
   momento do encerramento, nunca um valor digitado.
 - **Condição informada diferente do que aconteceu** (autorizado "à vista", pago em parcelas, ou o
@@ -537,16 +576,25 @@ conferir que só a primeira exige confirmação.
   superior a 90, a diferença de valor couber na tolerância e não houver outro candidato com a
   mesma nota para a autorização ou para o pagamento. A única outra forma de vínculo automático é
   a de parcela (FR-044 e FR-045).
-- **FR-012a**: Havendo empate na maior nota, o sistema DEVE desempatar pela forma de pagamento
-  informada na autorização: autorização de cartão de crédito combina com pagamento vindo de
-  fatura de cartão; as demais formas combinam com os outros pagamentos. Se exatamente um dos
-  empatados combinar, ele é o escolhido; caso contrário, o empate permanece. A forma de pagamento
-  NÃO DEVE alterar a nota nem excluir candidatos quando não há empate.
+- **FR-012a**: Havendo empate na maior nota, o sistema DEVE desempatar em dois passos. Primeiro,
+  pelo cartão: se exatamente um dos empatados tiver os mesmos quatro dígitos de cartão da outra
+  ponta, ele é o escolhido. Depois, pela forma de pagamento informada na autorização: autorização
+  de cartão de crédito combina com pagamento vindo de fatura de cartão; as demais formas combinam
+  com os outros pagamentos; se exatamente um dos empatados combinar, ele é o escolhido. Caso
+  contrário, o empate permanece. A forma de pagamento NÃO DEVE alterar a nota nem excluir
+  candidatos quando não há empate.
 - **FR-012b**: O sistema NÃO DEVE vincular automaticamente, nem como exato nem como parcela, um
   pagamento com data anterior à data da autorização. O par DEVE ser classificado como "Dúbio"
   (ou Parcial ou Excedente, conforme o valor) e marcado com o aviso "Pago antes da autorização".
   O aviso permanece no par depois da confirmação. Mesma data não é anterior; sem data em um dos
   lados, a regra não se aplica.
+- **FR-012c**: O sistema DEVE identificar o cartão do pagamento pelos quatro primeiros dígitos que
+  seguem "FATURA CARTAO" na espécie do documento, desconsiderando o que vier depois (por exemplo,
+  "FATURA CARTAO 7607 (7613)" é o cartão 7607). Quando a autorização e o pagamento têm cartão
+  identificado e os cartões são diferentes, o sistema NÃO DEVE vincular o par automaticamente,
+  nem como exato nem como parcela: o par é classificado como "Dúbio" (ou Parcial ou Excedente,
+  conforme o valor) e marcado com o aviso "Cartão diferente", que permanece depois da
+  confirmação. Quando só um dos lados tem cartão identificado, a regra não se aplica.
 - **FR-013**: O sistema DEVE classificar como "Dúbio" o par com nota de 60 a 89 e diferença de
   valor dentro da tolerância, e também os pares empatados que impediram a conciliação automática.
 - **FR-014**: O sistema DEVE classificar como "Parcial" o par com compatibilidade de fornecedor
@@ -568,10 +616,14 @@ conferir que só a primeira exige confirmação.
 - **FR-020**: O sistema DEVE exibir as pendências de uma sessão em lista comparativa, com a
   autorização de um lado e o pagamento do outro, mostrando nota, compatibilidade de cada eixo e
   diferença de valor.
-- **FR-021**: A lista padrão DEVE mostrar apenas Dúbios, Parciais, Excedentes, Sem pagamento e Sem
-  autorização. Os conciliados DEVEM poder ser consultados por filtro.
-- **FR-022**: O sistema DEVE oferecer filtros rápidos por classificação e busca por nome de
-  fornecedor, mantendo filtro e busca no endereço da tela.
+- **FR-021**: A lista padrão DEVE mostrar apenas o que envolve autorização e aguarda decisão:
+  Dúbios, Parciais, Excedentes, Sem pagamento e Saldo em aberto (autorização "Parcial" com saldo e
+  sem sugestão pendente). Os pagamentos Sem autorização NÃO entram na lista padrão: ficam na aba
+  Fila de investigação e no filtro "Sem autorização". Os conciliados DEVEM poder ser consultados
+  em aba própria.
+- **FR-022**: O sistema DEVE oferecer filtros rápidos por classificação (Todos, Dúbios, Parciais,
+  Excedentes, Sem pagamento, Saldo em aberto e Sem autorização) e busca por nome de fornecedor,
+  mantendo filtro e busca no endereço da tela.
 - **FR-023**: O sistema DEVE exibir, por sessão, o total de itens em cada classificação, o
   percentual de autorizações da sessão conciliadas automaticamente, quantas autorizações de
   sessões anteriores foram conciliadas por pagamentos desta sessão, a quantidade de pares pagos
@@ -581,6 +633,15 @@ conferir que só a primeira exige confirmação.
   marcados com esse aviso, pendentes ou já decididos, inclusive os vinculados manualmente,
   mostrando as duas datas e a situação. Os pares pendentes dessa aba também aparecem na lista
   padrão, na sua classificação.
+- **FR-023b**: A tela DEVE ter uma aba "Por cartão", com um resumo por cartão da sessão:
+  quantidade e total das autorizações, quantidade e total das linhas de fatura, quantas estão
+  conciliadas, quantas autorizações ainda não vieram em fatura e quantas linhas de fatura estão
+  sem autorização. Ao escolher um cartão, o sistema DEVE mostrar a conferência dele lado a lado:
+  as linhas da fatura com a autorização correspondente, as autorizações do cartão sem fatura e as
+  linhas de fatura sem autorização. Linhas de fatura excluídas por código aparecem apenas no
+  total de excluídas do cartão.
+- **FR-023c**: As listas de pendências, de conciliados e a fila de investigação DEVEM poder ser
+  filtradas por cartão, com o filtro mantido no endereço da tela.
 - **FR-024**: A lista DEVE ser paginada.
 - **FR-024a**: Ao exibir um pagamento cuja obrigação tem outras linhas na mesma sessão, o sistema
   DEVE indicar quantas são e permitir vê-las, para que o Operador vincule as demais à mesma
@@ -598,7 +659,10 @@ conferir que só a primeira exige confirmação.
 - **FR-028**: Ao confirmar um Excedente, o Operador DEVE escolher entre "Pagamento a maior", que
   quita a autorização e marca o par com um alerta permanente com o valor excedido, e "Acréscimo
   aceito", que quita a autorização e registra a diferença como acréscimo, sem alerta.
-  - **FR-028a**: "Encerrar com desconto" e "Acréscimo aceito" DEVEM exigir justificativa em texto.
+  - **FR-028a**: "Encerrar com desconto" e "Acréscimo aceito" DEVEM exigir uma categoria de
+    justificativa (desconto comercial, juros ou multa, frete, reajuste de preço, arredondamento
+    ou outro) e o texto da justificativa. O resto absorvido automaticamente pela tolerância fica
+    registrado com a categoria "arredondamento".
   - **FR-028b**: "Acréscimo aceito" só DEVE estar disponível quando o valor excedido não
     ultrapassar um teto percentual sobre o valor autorizado. O teto DEVE ser um parâmetro do
     sistema, com valor inicial de 10%, alterável por quem configura a tolerância.
@@ -650,6 +714,11 @@ conferir que só a primeira exige confirmação.
   pelo número de parcelas, dentro da tolerância, desde que a compatibilidade do fornecedor
   atinja o limite da conciliação automática, o valor caiba no saldo e o pagamento não sirva a
   outra autorização.
+  - **FR-044a**: No vínculo de parcela, a compatibilidade do valor DEVE ser calculada contra o
+    valor da parcela de referência (o valor autorizado dividido pelas parcelas previstas, ou o
+    valor de um pagamento já vinculado como "Ainda falta pagar"), e não contra o saldo inteiro.
+    O vínculo automático de parcela só acontece quando a nota assim calculada atinge o limite da
+    conciliação automática, como em qualquer outro vínculo automático.
 - **FR-045**: Depois que um pagamento é vinculado a uma autorização como "Ainda falta pagar", o
   sistema DEVE vincular automaticamente os pagamentos seguintes do mesmo fornecedor cujo valor
   seja igual ao de um pagamento já vinculado, dentro da tolerância, nas mesmas condições de
@@ -705,16 +774,17 @@ conferir que só a primeira exige confirmação.
   Parcial, Conciliada), sempre derivados dos vínculos. Traz a condição de pagamento informada e
   as parcelas previstas que o sistema reconheceu nela.
 - **Pagamento**: lançamento importado das planilhas de pagamentos (Módulo 1), com unidade,
-  fornecedor, valor pago, data e código de operação. Para a conciliação, está sem vínculo,
-  vinculado ou excluído por código (com o código que causou a exclusão, por execução).
+  fornecedor, valor pago, data, código de operação e, quando vem de fatura, o cartão. Para a
+  conciliação, está sem vínculo, vinculado ou excluído por código (com o código que causou a
+  exclusão, por execução).
 - **Sugestão**: par autorização-pagamento avaliado pelo motor, com nota, compatibilidade do
   fornecedor, compatibilidade do valor, diferença de valor e classificação (Dúbio, Parcial,
   Excedente). Pode ser confirmada ou rejeitada.
 - **Vínculo de Conciliação**: ligação entre uma autorização e um pagamento. Tem origem (automática
   ou manual), nota e classificação do motor, tipo de diferença (exata, parcial, excedente), valor
   da diferença, tratamento da diferença (ainda falta pagar, desconto, acréscimo aceito, pagamento
-  a maior), justificativa, quem vinculou e quando, o alerta de pagamento a maior e o aviso de
-  pago antes da autorização, se houver.
+  a maior), categoria e texto da justificativa, quem vinculou e quando, o alerta de pagamento a maior e os avisos de
+  pago antes da autorização e de cartão diferente, se houver.
 - **Configuração do Teto de Acréscimo**: percentual vigente, com quem alterou e quando.
 - **Configuração de Tolerância**: valor fixo e percentual vigentes, com quem alterou e quando.
 - **Registro de Auditoria**: descrito no Módulo 1; recebe as ações deste módulo.
@@ -737,7 +807,8 @@ conferir que só a primeira exige confirmação.
   (0 ocorrências).
 - **SC-006**: Nenhum pagamento fica vinculado a mais de uma autorização (0 ocorrências).
 - **SC-007**: Em 100% das autorizações, o saldo exibido é igual ao valor autorizado menos a soma
-  dos pagamentos vinculados e dos descontos registrados, nunca abaixo de zero.
+  dos pagamentos vinculados, dos descontos registrados e dos restos absorvidos pela tolerância,
+  nunca abaixo de zero.
 - **SC-008**: O Operador encontra e decide uma pendência (confirmar, rejeitar ou vincular) em
   menos de 30 segundos, sem abrir as planilhas.
 - **SC-009**: Para qualquer sessão processada, é possível saber com que tolerância e com quais
@@ -806,6 +877,10 @@ conferir que só a primeira exige confirmação.
   "30/60 dias" (1), "30/60/90 dias" (1) e um valor digitado por engano ("488,02"). Só 3 das 136
   autorizações indicam parcelamento. Assume-se que as parcelas previstas têm valores iguais; os
   prazos em dias não são usados para prever datas neste módulo.
+- **Cartão**: nos arquivos de julho/2026 há cinco cartões nas faturas (0798, 4931, 5352, 7607 e
+  7222) e quatro nas autorizações. Cada cartão tem uma fatura no mês, com 78 linhas ao todo. A
+  espécie do pagamento traz os quatro dígitos e, às vezes, um complemento ("7607 (7613)",
+  "4931 SOCIAL"); assume-se que os quatro primeiros dígitos identificam o cartão.
 - **Criar autorização correspondente**: cria uma autorização com os dados do pagamento, marcada
   como criada na conciliação. Ela regulariza o registro no sistema e não substitui o processo de
   autorização de compra da organização.

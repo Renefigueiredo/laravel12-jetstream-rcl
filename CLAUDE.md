@@ -281,6 +281,7 @@ protected function isAccessible(User $user, ?string $path = null): bool
 - PostgreSQL no Supabase (produção), SQLite (desenvolvimento e testes), disco privado `local` para arquivos (001-session-file-import)
 - PHP 8.5 (mínimo 8.3) + Laravel 12.69, Livewire 4.4, Filament 5.10 (tables, actions), Jetstream 5.5 + Fortify, Tailwind CSS 4.2, OpenSpout 4.32 (002-excluded-operation-codes)
 - PostgreSQL no Supabase (produção), SQLite (desenvolvimento e testes), disco privado `local` para os arquivos enviados (002-excluded-operation-codes)
+- PHP 8.5 (mínimo 8.3) + Laravel 12.69, Livewire 4.4, Filament 5.10 (tables, actions, forms), Jetstream 5.5 + Fortify, Tailwind CSS 4.2 (003-reconciliation-engine)
 
 ## Recent Changes
 - 001-session-file-import: Added PHP 8.3+ + Laravel 12.53, Livewire 4.2, Filament 5.3, Jetstream 5.4 + Fortify, Tailwind CSS 4.2, OpenSpout 4.32 (hoje transitivo; a declarar)
