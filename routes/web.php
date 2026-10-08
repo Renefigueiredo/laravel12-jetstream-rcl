@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\ExcludedCodeTemplateController;
 use App\Http\Controllers\ImportErrorReportController;
 use App\Http\Controllers\ImportFileDownloadController;
 use App\Http\Controllers\SpreadsheetTemplateController;
+use App\Livewire\ExcludedCodes\Index as ExcludedCodesIndex;
 use App\Livewire\Sessions\History;
 use App\Livewire\Sessions\Index;
 use App\Livewire\Sessions\Show;
@@ -40,4 +42,12 @@ Route::middleware([
 
     Route::get('/planilhas-modelo/{layout}', SpreadsheetTemplateController::class)
         ->name('templates.download');
+
+    Route::livewire('/codigos-excluidos', ExcludedCodesIndex::class)
+        ->can('manage-excluded-codes')
+        ->name('excluded-codes.index');
+
+    Route::get('/codigos-excluidos/modelo', ExcludedCodeTemplateController::class)
+        ->can('manage-excluded-codes')
+        ->name('excluded-codes.template');
 });

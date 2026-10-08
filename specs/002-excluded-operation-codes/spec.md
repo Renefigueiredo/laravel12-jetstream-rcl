@@ -1,6 +1,6 @@
 # Feature Specification: Códigos de Operação Excluídos da Conciliação (Módulo 5)
 
-**Feature Branch**: `feature/config-codigos-ignorados`
+**Feature Branch**: `002-excluded-operation-codes`
 **Created**: 2026-10-08
 **Status**: Draft
 **Input**: User description: "Na planilha CSV dos pagamentos realizados vêm muitos pagamentos que não devem entrar na conciliação. É preciso uma função para importar de uma planilha, ou cadastrar manualmente, os códigos que devem ser desconsiderados." (complementa a descrição do Módulo 5 - Lista de Códigos de Operação Ignorados)
@@ -34,6 +34,9 @@ data e responsável, e tentar cadastrá-lo de novo para confirmar a recusa por d
    **Then** o sistema considera "20150652" tanto para validar quanto para verificar duplicidade.
 5. **Given** o formulário de cadastro, **When** o usuário salva com o código em branco ou
    inválido, **Then** nada é cadastrado e o campo mostra o motivo.
+6. **Given** pagamentos já importados e um código que nenhum deles usa (por exemplo, digitado com
+   um dígito a menos), **When** o usuário informa esse código, **Then** o formulário mostra o
+   alerta "nenhum pagamento importado usa este código" e o cadastro continua permitido.
 
 ---
 
@@ -44,6 +47,11 @@ conciliação: não recebe pontuação, não é sugerido como par de nenhuma aut
 como pendência. O pagamento continua guardado na sessão, marcado como excluído por código.
 
 **Why this priority**: É o efeito que justifica a lista. Sem ele, a lista é só um cadastro.
+
+**Entrega**: este módulo entrega a lista e a forma de o motor consultá-la sem que ela mude durante
+a execução. Deixar os pagamentos de fora, marcá-los e registrar os códigos por execução é feito
+pelo motor de conciliação (Módulo 2), que é implementado depois. Os cenários 1 a 3 são validados
+com o Módulo 2.
 
 **Independent Test**: Cadastrar um código, executar uma sessão cujos pagamentos incluem esse
 código e verificar que esses pagamentos não foram conciliados nem listados como pendentes, e que
@@ -80,12 +88,12 @@ nenhum código foi gravado e que a linha com problema foi indicada.
 
 1. **Given** um arquivo válido com 10 códigos novos e 5 já cadastrados, **When** o usuário o
    importa, **Then** o sistema grava os 10, ignora os 5 e informa "Importação concluída: 10
-   códigos adicionados e 5 códigos ignorados por já estarem cadastrados."
+   códigos adicionados e 5 códigos ignorados por já estarem cadastrados ou repetidos no arquivo."
 2. **Given** um arquivo de 100 linhas em que a linha 45 tem o código em branco ou inválido,
-   **When** o usuário o importa, **Then** nenhum código é gravado e o sistema indica a linha 45 e
-   o motivo.
+   **When** o usuário o importa, **Then** nenhum código é gravado e o sistema indica a linha 45, a
+   coluna e o motivo.
 3. **Given** um arquivo com mais de uma linha inválida, **When** o usuário o importa, **Then** o
-   sistema lista todas as linhas com problema, cada uma com seu motivo.
+   sistema lista todos os erros, cada um com a linha, a coluna e o motivo.
 4. **Given** um arquivo em que o mesmo código aparece três vezes, **When** o usuário o importa,
    **Then** o código é gravado uma vez e as outras duas ocorrências contam como ignoradas.
 5. **Given** a tela de importação, **When** o usuário aciona "Baixar Planilha Modelo", **Then**
@@ -162,8 +170,9 @@ código e verificar os dois registros na trilha de auditoria.
 - **Linhas totalmente vazias**: são puladas e não contam como erro.
 - **Arquivo sem nenhum código** (vazio ou só com cabeçalho): é recusado com a mensagem de que não
   há códigos para importar.
-- **Arquivo acima do limite** (mais de 5 MB ou mais de 10.000 linhas): é recusado antes da leitura
-  das linhas, informando o limite.
+- **Arquivo acima do limite**: com mais de 5 MB, é recusado antes de ser lido; com mais de 10.000
+  linhas, é recusado durante a leitura, sem lista de erros por linha. Nos dois casos o sistema
+  informa o limite.
 - **Arquivo de tipo não aceito**: é recusado informando os tipos aceitos (.csv e .xlsx).
 - **Código lido como número pela planilha** (20150652 guardado como número): é tratado como o
   texto "20150652", sem casas decimais nem notação científica.
@@ -188,11 +197,15 @@ código e verificar os dois registros na trilha de auditoria.
   os pagamentos das duas unidades.
 - **FR-002**: O sistema DEVE permitir cadastrar um código com descrição opcional, registrando o
   usuário responsável e a data e hora.
-- **FR-003**: Um código DEVE ter de 1 a 20 caracteres, somente letras e dígitos. A descrição PODE
-  ter até 255 caracteres.
+- **FR-003**: Um código DEVE ter de 1 a 20 caracteres, somente letras sem acento (A a Z, a a z)
+  e dígitos. A descrição PODE ter até 255 caracteres.
 - **FR-004**: O sistema DEVE desconsiderar espaços no início e no fim do código e da descrição
   antes de validar e de verificar duplicidade, no cadastro manual e na importação.
 - **FR-005**: O sistema DEVE recusar o cadastro manual de um código que já esteja na lista.
+- **FR-005a**: No cadastro manual, o sistema DEVE alertar quando nenhum pagamento já importado
+  usa o código informado, antes de salvar e na confirmação do cadastro. O alerta NÃO DEVE impedir
+  o cadastro e NÃO é exibido enquanto não houver pagamento importado. (Acrescentado em
+  2026-10-08, a pedido do responsável, depois de um erro de digitação no teste manual.)
 
 **Importação por planilha**
 
@@ -203,7 +216,8 @@ código e verificar os dois registros na trilha de auditoria.
   célula for COD_OPERACAO, sem diferenciar maiúsculas de minúsculas.
 - **FR-009**: O sistema DEVE validar todas as linhas antes de gravar e, havendo qualquer linha
   inválida, não gravar nenhum código.
-- **FR-010**: Na recusa, o sistema DEVE informar o número e o motivo de cada linha inválida.
+- **FR-010**: Na recusa, o sistema DEVE informar, para cada erro, o número da linha, a coluna
+  (COD_OPERACAO ou DESCRICAO) e o motivo.
 - **FR-011**: O sistema DEVE ignorar, sem erro, os códigos que já estão na lista e os repetidos
   dentro do próprio arquivo, e informar ao final quantos foram adicionados e quantos ignorados.
 - **FR-012**: O sistema DEVE recusar arquivos com mais de 5 MB ou mais de 10.000 linhas e arquivos
@@ -225,6 +239,9 @@ código e verificar os dois registros na trilha de auditoria.
 - **FR-019**: Um código removido DEVE poder ser cadastrado de novo.
 
 **Efeito na conciliação**
+
+FR-020 a FR-023 são cumpridos pelo motor de conciliação (Módulo 2), a partir da lista entregue
+por este módulo. FR-024 a FR-026 são cumpridos aqui.
 
 - **FR-020**: Ao executar a conciliação de uma sessão, o sistema DEVE deixar de fora todo
   pagamento cujo código de operação conste na lista naquele momento.
@@ -269,7 +286,7 @@ código e verificar os dois registros na trilha de auditoria.
 ### Measurable Outcomes
 
 - **SC-001**: Nenhum pagamento com código presente na lista no momento da execução é conciliado,
-  sugerido ou listado como pendente.
+  sugerido ou listado como pendente. (Verificado com o Módulo 2.)
 - **SC-002**: Nenhuma importação com ao menos uma linha inválida altera a lista.
 - **SC-003**: Um usuário cadastra um código manualmente em menos de 30 segundos.
 - **SC-004**: Uma planilha com 10.000 códigos é importada em menos de 1 minuto.
@@ -278,7 +295,7 @@ código e verificar os dois registros na trilha de auditoria.
 - **SC-006**: Com 10.000 códigos cadastrados, a lista responde a busca, ordenação e troca de
   página em menos de 2 segundos.
 - **SC-007**: Para qualquer sessão processada, é possível saber quais códigos valiam na execução
-  e quantos pagamentos cada um excluiu.
+  e quantos pagamentos cada um excluiu. (Verificado com o Módulo 2.)
 
 ## Assumptions
 
