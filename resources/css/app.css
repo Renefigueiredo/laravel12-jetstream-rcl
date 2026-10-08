@@ -1,4 +1,9 @@
 @import 'tailwindcss';
+@import '../../vendor/filament/support/resources/css/index.css';
+@import '../../vendor/filament/actions/resources/css/index.css';
+@import '../../vendor/filament/forms/resources/css/index.css';
+@import '../../vendor/filament/schemas/resources/css/index.css';
+@import '../../vendor/filament/tables/resources/css/index.css';
 
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
