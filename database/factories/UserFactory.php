@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserRole;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -37,6 +38,16 @@ class UserFactory extends Factory
             'profile_photo_path' => null,
             'current_team_id' => null,
         ];
+    }
+
+    /**
+     * Indicate that the user is an administrator.
+     */
+    public function administrador(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::Administrador,
+        ]);
     }
 
     /**

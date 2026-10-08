@@ -15,12 +15,22 @@
                     <x-nav-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+
+                    <x-nav-link href="{{ route('sessions.index') }}" :active="request()->routeIs('sessions.index', 'sessions.show')">
+                        {{ __('conciliation.sessions.nav') }}
+                    </x-nav-link>
+
+                    @can('view-session-history')
+                        <x-nav-link href="{{ route('sessions.history') }}" :active="request()->routeIs('sessions.history')">
+                            {{ __('conciliation.sessions.history.nav') }}
+                        </x-nav-link>
+                    @endcan
                 </div>
             </div>
 
             <div class="hidden sm:flex sm:items-center sm:ms-6">
                 <!-- Teams Dropdown -->
-                @if (Laravel\Jetstream\Jetstream::hasTeamFeatures())
+                @if (Laravel\Jetstream\Jetstream::hasTeamFeatures() && Auth::user()->currentTeam)
                     <div class="ms-3 relative">
                         <x-dropdown align="right" width="60">
                             <x-slot name="trigger">
@@ -142,6 +152,16 @@
             <x-responsive-nav-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+
+            <x-responsive-nav-link href="{{ route('sessions.index') }}" :active="request()->routeIs('sessions.index', 'sessions.show')">
+                {{ __('conciliation.sessions.nav') }}
+            </x-responsive-nav-link>
+
+            @can('view-session-history')
+                <x-responsive-nav-link href="{{ route('sessions.history') }}" :active="request()->routeIs('sessions.history')">
+                    {{ __('conciliation.sessions.history.nav') }}
+                </x-responsive-nav-link>
+            @endcan
         </div>
 
         <!-- Responsive Settings Options -->
@@ -182,7 +202,7 @@
                 </form>
 
                 <!-- Team Management -->
-                @if (Laravel\Jetstream\Jetstream::hasTeamFeatures())
+                @if (Laravel\Jetstream\Jetstream::hasTeamFeatures() && Auth::user()->currentTeam)
                     <div class="border-t border-gray-200"></div>
 
                     <div class="block px-4 py-2 text-xs text-gray-400">

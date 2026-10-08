@@ -92,7 +92,7 @@ A fundação técnica do projeto. Definir isso antes evita que o código misture
 - Linguagem: `PHP 8.3`
 - Framework principal: `Laravel 12 (Jetstream 5 + Livewire 4)`
 - Banco de dados: `PostgreSQL no Supabase Cloud, plano pago (produção); SQLite como padrão em dev, trocável via DB_CONNECTION`
-- Principais bibliotecas: `Filament 5, Fortify, Sanctum 4, Pennant, archtechx/laravel-seo, Tailwind CSS 4, Vite 7, PHPUnit 11, Pint`
+- Principais bibliotecas: `Filament 5, Fortify, Sanctum 4, Pennant, archtechx/laravel-seo, Tailwind CSS 4, Vite 7, PHPUnit 11, Pint, OpenSpout 4 (leitura e escrita de .xlsx e .csv)`
 
 ### Onde escrevemos as regras pesadas do app?
 
@@ -238,7 +238,7 @@ Arquitetura multi-tenancy.
 
 - Uma empresa só (Single-tenant): O banco tem os dados de um cliente só. _Vibe:_ Mais simples de construir.
 
-> 💡 Motivo: Uma única empresa. Unidade operacional é um cadastro comum, e o acesso é dado por permissão de usuário por unidade, porque o financeiro precisa cruzar dados de várias unidades. Ainda não implementado: o Jetstream Teams está ativo no código e não deve ser usado como unidade (desligar ou ignorar).
+> 💡 Motivo: Uma única empresa. Unidade operacional é um cadastro comum, e o acesso é dado por permissão de usuário por unidade, porque o financeiro precisa cruzar dados de várias unidades. Implementado no Módulo 1: cada usuário tem um papel (`App\Enums\UserRole`: Administrador ou Operador) e todo usuário atua nas duas unidades. O Jetstream Teams continua ativo no código, sem uso para unidades ou papéis.
 
 ### As tabelas foram normalizadas ou ficamos com dados repetidos?
 
@@ -402,7 +402,7 @@ Gerenciando permissões.
 
 - Checagem de Políticas (Policies): O código cruza o Usuário atual com o Recurso que ele quer alterar. _Vibe:_ Seguro e granular (ex: "Só apaga se for dono do post ou admin").
 
-> 💡 Motivo: app/Policies/TeamPolicy.php cruza usuário e time; os papéis do Jetstream complementam, não substituem.
+> 💡 Motivo: O acesso é decidido no servidor por policies e gates que conferem o papel do usuário (`App\Enums\UserRole`), como em app/Policies/ReconciliationSessionPolicy.php e no gate `view-session-history`. Papéis de time do Jetstream não são usados.
 
 ### Defesa contra formulários fantasmas (CSRF/CORS)
 
@@ -418,7 +418,7 @@ O usuário acessa /perfil/10/editar e resolve testar /perfil/11/editar.
 
 - Confere a identidade: Antes de abrir, o código checa "Esse ID pertence ao cara que está logado?". _Vibe:_ Privacidade garantida.
 
-> 💡 Motivo: As Actions do Jetstream autorizam via Gate/TeamPolicy antes de alterar um time; mesma regra vale para recursos novos.
+> 💡 Motivo: As classes em app/Actions/Conciliation autorizam via Gate e policy antes de alterar uma sessão; a mesma regra vale para recursos novos.
 
 ### O usuário entra com Google, Apple ou cria senha própria?
 
@@ -426,7 +426,7 @@ Estratégia de autenticação.
 
 - Senha própria (Credenciais): O usuário cria login e senha no nosso sistema. _Vibe:_ Mais controle, mas você é responsável por guardar a senha com segurança.
 
-> 💡 Motivo: Autenticação via Fortify (login, reset, 2FA); Socialite não está instalado. Não há auto-cadastro: só o administrador cria usuários. Ainda não implementado: o registro público do Fortify precisa ser desligado.
+> 💡 Motivo: Autenticação via Fortify (login, reset, 2FA); Socialite não está instalado. Não há auto-cadastro: só o administrador cria usuários. O registro público do Fortify e a exclusão de conta do Jetstream estão desligados; o primeiro Administrador é criado com `php artisan conciliation:create-administrator`.
 
 ### O usuário fica logado para sempre?
 

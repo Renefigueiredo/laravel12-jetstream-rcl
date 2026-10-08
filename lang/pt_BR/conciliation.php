@@ -1,0 +1,186 @@
+<?php
+
+return [
+
+    'roles' => [
+        'administrador' => 'Administrador',
+        'operador' => 'Operador',
+    ],
+
+    'units' => [
+        'social' => 'Unidade Social',
+        'saude' => 'Unidade de Saúde',
+    ],
+
+    'layouts' => [
+        'authorizations' => 'Autorizações',
+        'payments' => 'Pagamentos',
+    ],
+
+    'sessions' => [
+        'title' => 'Sessões de conciliação',
+        'nav' => 'Sessões',
+        'new' => 'Nova Sessão',
+        'label' => 'Sessão :number - :period',
+        'number' => 'Número',
+        'period' => 'Período',
+        'period_help' => 'Mês e ano de referência, no formato MM/AAAA.',
+        'period_placeholder' => 'MM/AAAA',
+        'cancel' => 'Cancelar',
+        'status_label' => 'Situação',
+        'creator' => 'Criada por',
+        'created_at' => 'Criada em',
+        'open' => 'Abrir',
+        'back' => 'Voltar para a lista',
+        'empty' => 'Nenhuma sessão criada.',
+        'not_found' => 'Sessão não encontrada.',
+        'created' => 'Sessão criada.',
+        'status' => [
+            'open' => 'Aberta',
+            'processing' => 'Em processamento',
+            'processed' => 'Processada',
+        ],
+        'complementary' => [
+            'heading' => 'Sessão complementar',
+            'warning' => 'Já existe sessão para :period. A nova sessão será complementar e só receberá lançamentos que ainda não existem nas outras sessões do período.',
+            'confirm' => 'Criar sessão complementar',
+        ],
+        'errors' => [
+            'period_format' => 'Informe o período no formato MM/AAAA, com mês de 01 a 12.',
+            'period_future' => 'O período não pode ser posterior ao mês corrente.',
+            'locked' => 'A sessão está travada (:status) e não aceita esta ação.',
+        ],
+        'execute' => [
+            'action' => 'Executar Conciliação',
+            'confirm_heading' => 'Executar a conciliação?',
+            'confirm_body' => 'A sessão será travada e não aceitará novos envios até ser reaberta.',
+            'missing' => 'Faltam as planilhas: :slots.',
+            'engine_disabled' => 'O motor de conciliação ainda não está disponível nesta instalação.',
+            'requested' => 'Conciliação solicitada. Você pode sair desta tela; o processamento continua.',
+            'progress' => 'Processando: :percent%',
+            'failed' => 'A última execução falhou e a sessão voltou a ficar aberta: :message',
+            'stalled' => 'O processamento foi interrompido e a sessão voltou a ficar aberta.',
+            'locked_notice' => 'Sessão travada. Reabra a sessão para substituir planilhas.',
+        ],
+        'reopen' => [
+            'action' => 'Reabrir Sessão',
+            'confirm_heading' => 'Reabrir a sessão?',
+            'confirm_body' => 'O resultado atual deixará de valer e a conciliação precisará ser executada novamente.',
+            'done' => 'Sessão reaberta.',
+            'not_processed' => 'Só é possível reabrir uma sessão processada.',
+            'blocked' => '{1} Não é possível reabrir: há :count decisão manual ou vínculo com outra sessão que precisa ser desfeito antes.|[2,*] Não é possível reabrir: há :count decisões manuais ou vínculos com outras sessões que precisam ser desfeitos antes.',
+            'stale' => 'O resultado anterior não é mais válido. Execute a conciliação novamente.',
+        ],
+        'delete' => [
+            'action' => 'Excluir',
+            'confirm_heading' => 'Excluir a sessão?',
+            'confirm_body' => 'A sessão, os arquivos enviados e os lançamentos importados serão apagados definitivamente.',
+            'done' => 'Sessão excluída.',
+            'processed' => 'Sessões já conciliadas são mantidas como evidência de auditoria e não podem ser excluídas.',
+            'processing' => 'A sessão está em processamento e não pode ser excluída.',
+        ],
+        'history' => [
+            'title' => 'Histórico de exclusões e reaberturas',
+            'nav' => 'Histórico de sessões',
+            'user' => 'Usuário',
+            'when' => 'Data e hora',
+            'action' => 'Ação',
+            'session' => 'Sessão',
+            'files' => 'Arquivos removidos',
+            'empty' => 'Nenhuma exclusão ou reabertura registrada.',
+        ],
+    ],
+
+    'slots' => [
+        'authorizations' => 'Autorizações',
+        'payments_social' => 'Pagamentos da Unidade Social',
+        'payments_saude' => 'Pagamentos da Unidade de Saúde',
+        'status' => [
+            'pending' => 'Pendente',
+            'loaded' => 'Carregado',
+        ],
+        'file' => 'Arquivo',
+        'entries' => '{0} Nenhum lançamento novo|{1} :count lançamento|[2,*] :count lançamentos',
+        'skipped_value' => '{1} :count linha ignorada por valor negativo ou zero|[2,*] :count linhas ignoradas por valor negativo ou zero',
+        'skipped_existing' => '{1} :count linha já existente em outra sessão do período|[2,*] :count linhas já existentes em outra sessão do período',
+        'uploaded_by' => 'Enviado por :name em :when',
+        'first_sheet_only' => 'O arquivo tem :count abas; apenas a primeira foi lida.',
+        'missing_columns' => 'Colunas do layout não encontradas no arquivo: :columns.',
+        'period_divergence' => '{1} Aceito com :count lançamento fora do período (:from a :to)|[2,*] Aceito com :count lançamentos fora do período (:from a :to)',
+        'download_original' => 'Baixar original',
+        'download_template' => 'Baixar planilha modelo',
+        'choose_file' => 'Selecionar planilha (.xlsx ou .csv)',
+        'send' => 'Enviar',
+        'replace' => 'Substituir planilha',
+        'uploading' => 'Enviando arquivo...',
+    ],
+
+    'import' => [
+        'queued' => 'Arquivo recebido. A validação começou.',
+        'in_progress' => 'Validando: :percent%',
+        'accepted' => 'Planilha aceita.',
+        'already_loaded' => 'Este arquivo já está carregado neste cartão.',
+        'failed' => 'Não foi possível processar o arquivo. Nada foi gravado. Tente enviar novamente.',
+        'stalled' => 'O processamento do arquivo foi interrompido. Nada foi gravado. Envie novamente.',
+        'rejected' => 'Planilha recusada.',
+        'error_total' => '{1} :count erro encontrado.|[2,*] :count erros encontrados.',
+        'first_errors' => 'Primeiros erros:',
+        'download_errors' => 'Baixar relatório completo de erros',
+        'divergence' => [
+            'heading' => 'Datas fora do período da sessão',
+            'body' => '{1} :count lançamento tem data fora de :period. Datas encontradas no arquivo: :from a :to.|[2,*] :count lançamentos têm data fora de :period. Datas encontradas no arquivo: :from a :to.',
+            'confirm' => 'Confirmar mesmo assim',
+            'cancel' => 'Cancelar',
+            'cancelled' => 'Envio cancelado. O cartão não foi alterado.',
+            'not_pending' => 'Este envio não está mais aguardando confirmação.',
+        ],
+        'report' => [
+            'row' => 'Linha',
+            'column' => 'Coluna',
+            'value' => 'Valor encontrado',
+            'reason' => 'Motivo',
+            'filename' => 'erros-:name.xlsx',
+        ],
+    ],
+
+    'errors' => [
+        'file_type' => 'Tipo de arquivo não aceito. Envie uma planilha .xlsx ou .csv.',
+        'file_size' => 'O arquivo excede o tamanho máximo de :max MB.',
+        'unreadable' => 'Não foi possível ler o arquivo. Verifique se ele não está corrompido.',
+        'missing_headers' => 'Colunas obrigatórias ausentes: :columns. Este cartão recebe a planilha de :layout; confira se o arquivo foi enviado no cartão certo.',
+        'no_entries' => 'A planilha não tem lançamentos.',
+        'no_valid_entries' => 'A planilha não tem lançamentos válidos: todas as linhas têm valor negativo ou zero.',
+        'same_file_other_slot' => 'Este mesmo arquivo já está carregado no outro cartão de pagamentos desta sessão.',
+        'slot_taken' => 'Outro envio para este cartão foi concluído ao mesmo tempo. Confira o cartão e envie novamente, se necessário.',
+        'required' => 'Campo obrigatório não preenchido.',
+        'money' => [
+            'empty' => 'Valor não preenchido.',
+            'format' => 'Valor em formato inválido.',
+            'decimals' => 'Valor com mais de duas casas decimais.',
+        ],
+        'date' => [
+            'empty' => 'Data não preenchida.',
+            'format' => 'Data em formato não aceito. Use dia/mês/ano (31/05/2026) ou o formato do ERP (31-MAY-26).',
+            'invalid' => 'Data inexistente.',
+        ],
+    ],
+
+    'audit' => [
+        'actions' => [
+            'session_created' => 'Sessão criada',
+            'period_divergence_confirmed' => 'Divergência de período confirmada',
+            'file_replaced' => 'Planilha substituída',
+            'reconciliation_requested' => 'Conciliação solicitada',
+            'session_reopened' => 'Sessão reaberta',
+            'session_deleted' => 'Sessão excluída',
+        ],
+    ],
+
+    'users' => [
+        'administrator_created' => 'Administrador :email criado.',
+        'administrator_promoted' => 'O usuário :email agora é Administrador.',
+        'password' => 'Senha',
+        'password_too_short' => 'A senha precisa ter pelo menos 8 caracteres.',
+    ],
+
+];
