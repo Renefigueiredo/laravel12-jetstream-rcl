@@ -40,6 +40,9 @@
   da autorização.
 - Q: O motor deve entrar em uso antes de existir o cadastro de códigos excluídos (Módulo 5)? → A:
   Não. O Módulo 5 é implementado antes do motor, que já nasce usando a lista.
+- Q: O que o motor assume do Módulo 5, já entregue? → A: O pagamento excluído por código não pode
+  ser vinculado manualmente, e a execução guarda os códigos vigentes e a quantidade de pagamentos
+  excluídos por código (FR-020 a FR-023, SC-001 e SC-007 da spec do Módulo 5).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -114,6 +117,12 @@ e conferir que cada item caiu na classificação esperada e que o resumo bate co
     o par fica "Dúbio" com o aviso "Pago antes da autorização".
 19. **Given** uma autorização e um pagamento de mesma data, **When** a conciliação é executada,
     **Then** a regra de data não se aplica e o par é conciliado normalmente.
+20. **Given** uma sessão já processada, **When** um código é adicionado à lista ou removido
+    dela, **Then** o resultado da sessão não muda até que ela seja reaberta e executada de novo.
+21. **Given** uma sessão processada, **When** o Operador consulta os dados da execução, **Then**
+    vê quais códigos estavam na lista naquele momento e quantos pagamentos cada um excluiu.
+22. **Given** um pagamento cujo código difere de um código da lista apenas por espaços no início
+    ou no fim, **When** a conciliação é executada, **Then** o pagamento é excluído.
 
 ---
 
@@ -282,6 +291,8 @@ pendências e que a auditoria guarda a nota original.
 8. **Given** um pagamento "Sem autorização" da sessão, **When** o Operador aciona "Vincular",
    **Then** pode escolher uma autorização da sessão ou uma autorização em aberto de sessão
    anterior processada, dentro da janela de meses.
+9. **Given** um pagamento excluído por código na execução, **When** o Operador procura pagamentos
+   para vínculo manual, **Then** ele não é oferecido, e a tentativa de vinculá-lo é recusada.
 
 ---
 
@@ -489,11 +500,24 @@ conferir que só a primeira exige confirmação.
 - **FR-003**: O sistema DEVE comparar os pagamentos das duas unidades (Social e Saúde) da sessão
   com as autorizações da sessão e com as autorizações em aberto de sessões anteriores (FR-031).
 - **FR-004**: O sistema DEVE deixar fora da comparação os pagamentos cujo código de operação
-  esteja na lista de códigos excluídos no momento da execução, mantendo-os guardados e marcados.
+  esteja na lista de códigos excluídos no momento da execução, mantendo-os guardados e marcados
+  como excluídos por código, com a indicação do código que causou a exclusão.
+  - **FR-004a**: A lista DEVE ser lida uma única vez, no início da execução. Alterações feitas
+    durante a execução ou depois dela NÃO DEVEM mudar o resultado; passam a valer na próxima
+    execução da sessão.
+  - **FR-004b**: Um pagamento excluído por código NÃO DEVE receber nota, ser sugerido, ser
+    vinculado automaticamente, ser oferecido para vínculo manual, receber uma autorização
+    criada na conciliação, nem aparecer como "Sem autorização".
+  - **FR-004c**: A execução DEVE guardar os códigos que compunham a lista naquele momento e a
+    quantidade de pagamentos excluídos por cada código.
+  - **FR-004d**: O sistema DEVE exibir, nos dados da execução de uma sessão processada, os
+    códigos vigentes e quantos pagamentos cada um excluiu, e permitir consultar os pagamentos
+    excluídos por filtro.
 - **FR-005**: O sistema DEVE produzir o mesmo resultado sempre que os lançamentos e os parâmetros
   forem os mesmos.
 - **FR-006**: O sistema DEVE guardar, em cada execução, os parâmetros usados: tolerância, limites
-  de nota, janela de meses anteriores, quem solicitou e quando.
+  de nota, janela de meses anteriores, teto de acréscimo, lista de códigos excluídos (FR-004c),
+  quem solicitou e quando.
 - **FR-007**: Em caso de falha, o sistema NÃO DEVE manter nenhum vínculo produzido pela execução.
 - **FR-008**: Ao executar de novo uma sessão reaberta, o sistema DEVE descartar o resultado
   anterior antes de produzir o novo.
@@ -589,7 +613,8 @@ conferir que só a primeira exige confirmação.
     motor em nenhum caso.
 - **FR-029**: O sistema DEVE permitir vincular manualmente um pagamento sem vínculo da sessão a
   uma autorização da sessão ou a uma autorização em aberto de sessão anterior dentro da janela
-  (FR-031), calculando o tipo de diferença.
+  (FR-031), calculando o tipo de diferença. Pagamentos excluídos por código não podem ser
+  vinculados (FR-004b).
 - **FR-030**: O sistema DEVE permitir desvincular qualquer par conciliado, devolvendo os dois
   lançamentos às pendências e recalculando o saldo da autorização.
 - **FR-031**: Ao executar uma sessão, o sistema DEVE incluir na comparação as autorizações com
@@ -673,15 +698,15 @@ conferir que só a primeira exige confirmação.
 ### Key Entities
 
 - **Execução da Conciliação**: uma rodada do motor sobre uma sessão. Tem quem solicitou, início e
-  fim, tolerância e limites de nota usados, códigos excluídos vigentes e os totais por
-  classificação.
+  fim, tolerância e limites de nota usados, códigos excluídos vigentes com a quantidade de
+  pagamentos que cada um excluiu, e os totais por classificação.
 - **Autorização**: lançamento importado da planilha de autorizações (Módulo 1) ou criado na
   conciliação. Para a conciliação, tem valor autorizado, saldo restante e situação (Aberta,
   Parcial, Conciliada), sempre derivados dos vínculos. Traz a condição de pagamento informada e
   as parcelas previstas que o sistema reconheceu nela.
 - **Pagamento**: lançamento importado das planilhas de pagamentos (Módulo 1), com unidade,
   fornecedor, valor pago, data e código de operação. Para a conciliação, está sem vínculo,
-  vinculado ou excluído por código.
+  vinculado ou excluído por código (com o código que causou a exclusão, por execução).
 - **Sugestão**: par autorização-pagamento avaliado pelo motor, com nota, compatibilidade do
   fornecedor, compatibilidade do valor, diferença de valor e classificação (Dúbio, Parcial,
   Excedente). Pode ser confirmada ou rejeitada.
@@ -759,10 +784,10 @@ conferir que só a primeira exige confirmação.
   automático quando o pagamento é anterior à autorização (FR-012b). A forma de pagamento serve
   apenas de desempate (FR-012a). Assume-se que a espécie do documento no relatório do ERP
   ("FATURA CARTAO ...") identifica os pagamentos de fatura de cartão.
-- **Dependência do Módulo 5**: o cadastro e a importação de códigos excluídos (Módulo 5) são
-  implementados antes deste módulo, e o motor já nasce usando a lista. A fila de investigação só
-  é utilizável com ela preenchida: em julho/2026 há cerca de 3.600 pagamentos para 136
-  autorizações, e a maior parte é folha, impostos e outras operações que não são compras.
+- **Dependência do Módulo 5**: o cadastro e a importação de códigos excluídos (Módulo 5) já
+  estão entregues, e o motor nasce usando a lista por meio de uma fotografia tirada no início da
+  execução. Com a lista montada pelo responsável (67 códigos), 3.367 dos 3.633 pagamentos de
+  julho/2026 ficam de fora e 266 seguem para a conciliação com as 136 autorizações.
 - **Pendências de sessões anteriores**: nos arquivos de julho/2026, só 4 das 56 autorizações de
   cartão de crédito têm pagamento de cartão de mesmo valor no próprio mês; a fatura chega no mês
   seguinte. Por isso o motor olha para trás. A janela inicial de 3 meses é uma suposição, a
