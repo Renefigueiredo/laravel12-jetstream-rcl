@@ -28,11 +28,16 @@ class SheetRows
     /**
      * Interpret every data row with the layout, skipping blank rows.
      *
+     * Reading stops after a long run of consecutive blank rows: spreadsheets exported with a
+     * formula or a format dragged to the last row of the sheet have a million empty rows.
+     *
      * @return Generator<int, ParsedRow|list<RowError>|null>
      */
     public function parsed(string $absolutePath, SpreadsheetLayout $layout, ImportSlot $slot): Generator
     {
         $headers = null;
+        $blankRowsLimit = max(1, (int) config('conciliation.upload.blank_rows_limit'));
+        $consecutiveBlankRows = 0;
 
         foreach ($this->reader->rows($absolutePath) as $rowNumber => $cells) {
             if ($headers === null) {
@@ -42,8 +47,14 @@ class SheetRows
             }
 
             if ($this->isBlank($cells)) {
+                if (++$consecutiveBlankRows >= $blankRowsLimit) {
+                    return;
+                }
+
                 continue;
             }
+
+            $consecutiveBlankRows = 0;
 
             $row = [];
             $raw = [];

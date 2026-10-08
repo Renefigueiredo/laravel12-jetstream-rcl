@@ -53,7 +53,7 @@ class SpreadsheetValidator
         if ($missingRequired !== []) {
             $result->message = __('conciliation.errors.missing_headers', [
                 'columns' => implode(', ', $missingRequired),
-                'expected' => implode(', ', $layout->requiredHeaders()),
+                'layout' => $layout->type()->label(),
             ]);
 
             return;

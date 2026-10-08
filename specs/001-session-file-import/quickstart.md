@@ -6,14 +6,25 @@ Como preparar o ambiente e conferir a feature de ponta a ponta. Detalhes de mode
 
 ## Pré-requisitos
 
-1. Dependências instaladas: `composer install` e `npm install`. Hoje `vendor/` e `node_modules/`
-   não existem neste checkout, e por isso o servidor Laravel Boost não sobe.
-2. `openspout/openspout` declarado em `composer.json` (depende de aprovação; ver
-   [research.md](./research.md), R2).
-3. PHP com `upload_max_filesize` e `post_max_size` de pelo menos 55M. O padrão local é 2M e 8M.
-   O servidor web precisa do mesmo limite (por exemplo, `client_max_body_size` no nginx).
-4. `.env`: `APP_LOCALE=pt_BR`, `QUEUE_CONNECTION=database`, `FILESYSTEM_DISK=local`.
-5. Auto-registro e exclusão de conta desligados (tarefas da Fundação).
+1. Dependências instaladas: `composer install` e `npm install`.
+2. `.env` criado a partir de `.env.example`, com a chave gerada (`php artisan key:generate`). O
+   `.env.example` já traz `APP_LOCALE=pt_BR`, `QUEUE_CONNECTION=database` e
+   `FILESYSTEM_DISK=local`.
+3. Banco local criado: `touch database/database.sqlite`.
+4. PHP com `upload_max_filesize` de pelo menos 55M e `post_max_size` de pelo menos 60M. O padrão
+   do PHP de linha de comando é 2M e 8M, e é ele que o `php artisan serve` usa. Para conferir:
+   `php -i | grep -E "upload_max_filesize|post_max_size"`. Para ajustar no Linux, crie um arquivo
+   em `conf.d` do PHP de linha de comando:
+
+   ```bash
+   printf 'upload_max_filesize=55M\npost_max_size=60M\n' | sudo tee /etc/php/8.5/cli/conf.d/99-conciliacao.ini
+   ```
+
+   Em servidor com PHP-FPM, o arquivo `public/.user.ini` do projeto já define esses valores; o
+   servidor web precisa do mesmo limite (por exemplo, `client_max_body_size 60m` no nginx).
+
+O OpenSpout já está declarado em `composer.json`, e o auto-registro e a exclusão de conta já estão
+desligados no código.
 
 ## Preparar
 

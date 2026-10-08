@@ -300,6 +300,40 @@ Filament 5 e OpenSpout estão marcadas com **[verificar no Boost]** e devem ser 
 - **Tipo e tamanho recusados antes da fila**: arquivo de tipo não aceito ou acima do limite é
   recusado na hora, com mensagem no cartão, sem criar tentativa.
 
+## R25. Achados do teste com os arquivos reais de julho/2026
+
+- **Pagamentos (ERP)**: os dois CSVs entraram sem ajuste. Saúde: 3.461 lançamentos e 47 linhas
+  ignoradas por valor; Social: 172 lançamentos. Todos os identificadores da Saúde são distintos.
+- **Autorizações (ELO)**: arquivo de 10 MB com 136 autorizações. A coluna VALOR é a fórmula
+  `IF(VALUE(K2)<=0,"",VALUE(K2))` arrastada até a linha 1.048.576, e o arquivo traz ainda uma aba
+  de gráficos e uma tabela dinâmica. Dois defeitos apareceram: a fórmula era lida como texto, o
+  que tornava inválida a coluna VALOR de toda linha, e o sistema percorria o milhão de linhas.
+- **Decision**: ler células com fórmula pelo valor calculado e encerrar a leitura depois de 10.000
+  linhas em branco seguidas (`upload.blank_rows_limit`). A validação desse arquivo caiu de mais
+  de dez minutos, sem terminar, para cerca de um segundo.
+- **Alternatives considered**: ler todas as linhas com indicador de progresso (cerca de 80
+  segundos por passada para 136 autorizações); confiar na dimensão declarada pela aba (ela
+  declara o milhão de linhas).
+- **Limite de envio**: o PHP de linha de comando aceita 2 MB por padrão; sem ajuste, a planilha
+  do ELO nem chega ao servidor.
+
+## R26. Roteiro manual no navegador (T079)
+
+Executado em 2026-10-08 com os arquivos reais de julho/2026: carga dos três cartões, planilha no
+cartão errado, mesmo arquivo nos dois cartões de pagamento, alerta de datas fora do período com
+cancelamento, exclusão de sessão e consulta ao histórico. Execução da conciliação e reabertura
+não foram exercitadas na tela, porque dependem do motor do Módulo 2.
+
+Defeitos encontrados e corrigidos, nenhum deles detectável pelos testes automatizados:
+
+- **Modal atrás do fundo escuro**: o componente de modal do Jetstream dependia da classe
+  `transform`, que no Tailwind 4 não cria mais uma camada própria. O painel ganhou `relative`.
+- **Tabelas em modo escuro**: os estilos escuros do Filament seguiam o sistema operacional. A
+  variante `dark` passou a valer só sob uma classe `.dark`, que a aplicação não usa.
+- **Mensagem de envio em inglês**: faltava `lang/pt_BR/validation.php`.
+- **Mensagem de colunas ausentes**: repetia a mesma lista; agora informa qual planilha o cartão
+  recebe.
+
 ## Pendências que dependem do responsável
 
 | # | Assunto | Efeito no plano |

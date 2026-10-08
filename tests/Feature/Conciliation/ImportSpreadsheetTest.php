@@ -266,6 +266,26 @@ class ImportSpreadsheetTest extends TestCase
         $this->assertSame(2, $session->activeFiles()->sole()->rows_imported);
     }
 
+    public function test_reading_stops_after_a_long_run_of_blank_rows(): void
+    {
+        config(['conciliation.upload.blank_rows_limit' => 5]);
+        $session = ReconciliationSession::factory()->create();
+        $headers = app(PaymentsLayout::class)->headers();
+        $rows = [
+            $this->paymentRow(),
+            [], [], [], [],
+            $this->paymentRow(),
+            [], [], [], [], [],
+            $this->paymentRow(['CEDENTE' => '']),
+        ];
+
+        $attempt = $this->submit($session, ImportSlot::PaymentsSocial, $this->csvFile($headers, $rows));
+
+        $this->assertSame(ImportAttemptStatus::Accepted, $attempt->status);
+        $this->assertSame(2, $session->activeFiles()->sole()->rows_imported);
+        $this->assertSame([2, 7], PaymentEntry::query()->orderBy('row_number')->pluck('row_number')->all());
+    }
+
     public function test_upload_is_refused_when_the_session_is_not_open(): void
     {
         $session = ReconciliationSession::factory()->processed()->create();

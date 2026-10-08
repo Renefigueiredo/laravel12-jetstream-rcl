@@ -3,6 +3,8 @@
 namespace App\Services\Import;
 
 use App\Contracts\SpreadsheetReader;
+use OpenSpout\Common\Entity\Cell;
+use OpenSpout\Common\Entity\Cell\FormulaCell;
 use OpenSpout\Reader\CSV\Options as CsvOptions;
 use OpenSpout\Reader\CSV\Reader as CsvReader;
 use OpenSpout\Reader\ReaderInterface;
@@ -27,7 +29,7 @@ class OpenSpoutSpreadsheetReader implements SpreadsheetReader
                 foreach ($sheet->getRowIterator() as $row) {
                     $rowNumber++;
 
-                    yield $rowNumber => $row->toArray();
+                    yield $rowNumber => array_map($this->cellValue(...), $row->getCells());
                 }
 
                 break;
@@ -50,6 +52,14 @@ class OpenSpoutSpreadsheetReader implements SpreadsheetReader
         } finally {
             $reader->close();
         }
+    }
+
+    /**
+     * Formula cells are read by the value the spreadsheet calculated, never by the formula text.
+     */
+    protected function cellValue(Cell $cell): mixed
+    {
+        return $cell instanceof FormulaCell ? $cell->getComputedValue() : $cell->getValue();
     }
 
     protected function open(string $absolutePath): ReaderInterface

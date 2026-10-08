@@ -147,7 +147,7 @@ return [
         'file_type' => 'Tipo de arquivo não aceito. Envie uma planilha .xlsx ou .csv.',
         'file_size' => 'O arquivo excede o tamanho máximo de :max MB.',
         'unreadable' => 'Não foi possível ler o arquivo. Verifique se ele não está corrompido.',
-        'missing_headers' => 'Colunas obrigatórias ausentes: :columns. Colunas esperadas neste cartão: :expected.',
+        'missing_headers' => 'Colunas obrigatórias ausentes: :columns. Este cartão recebe a planilha de :layout; confira se o arquivo foi enviado no cartão certo.',
         'no_entries' => 'A planilha não tem lançamentos.',
         'no_valid_entries' => 'A planilha não tem lançamentos válidos: todas as linhas têm valor negativo ou zero.',
         'same_file_other_slot' => 'Este mesmo arquivo já está carregado no outro cartão de pagamentos desta sessão.',

@@ -5,6 +5,12 @@
 @import '../../vendor/filament/schemas/resources/css/index.css';
 @import '../../vendor/filament/tables/resources/css/index.css';
 
+/*
+  The application has no dark theme. Dark styles apply only under a `.dark` class, which is
+  never set, so Filament components do not follow the color scheme of the operating system.
+*/
+@custom-variant dark (&:where(.dark, .dark *));
+
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 

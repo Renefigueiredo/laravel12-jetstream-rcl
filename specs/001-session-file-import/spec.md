@@ -277,6 +277,10 @@ processada não oferece exclusão.
   de lançamentos válidos.
 - **Linhas totalmente em branco no meio ou no fim da planilha**: são ignoradas e não contam como
   erro nem como lançamento.
+- **Planilha com fórmula arrastada até a última linha da aba** (caso da planilha real do ELO, com
+  136 autorizações e 1.048.576 linhas): as linhas cuja fórmula resulta em vazio contam como linhas
+  em branco, e a leitura termina depois de 10.000 delas seguidas. Dados que estivessem depois de
+  um intervalo desse tamanho não seriam lidos.
 
 ## Requirements *(mandatory)*
 
@@ -348,6 +352,10 @@ processada não oferece exclusão.
   de texto, ou uma data inexistente, é erro.
 - **FR-010e**: Células que a planilha já guarda como número ou como data DEVEM ser lidas pelo seu
   valor, sem depender do formato de exibição.
+- **FR-010g**: Células com fórmula DEVEM ser lidas pelo valor calculado que a planilha guarda, e
+  nunca pelo texto da fórmula. A leitura de uma planilha DEVE terminar depois de 10.000 linhas em
+  branco seguidas (quantidade ajustável por configuração), porque planilhas com fórmula ou
+  formato arrastado até o fim da aba têm cerca de um milhão de linhas vazias.
 - **FR-010f**: O sistema DEVE importar como lançamentos separados as linhas idênticas de uma mesma
   planilha (mesmo fornecedor, valor e data), sem aviso e sem tratá-las como erro ou duplicidade.
 - **FR-011**: O sistema DEVE exigir um layout fixo de cabeçalhos e recusar o arquivo cujas colunas
@@ -588,8 +596,9 @@ processada não oferece exclusão.
 - **Layout de Autorizações**: fixado a partir de imagens da planilha real do ELO, com dados de
   julho/2026 (FR-011h). Quatro nomes aparecem cortados nas imagens e foram completados
   (MAP_SETOR_SOLICITANTE, MAP_FUNCIONARIO_SOLICITANTE, MAP_FORMA_DE_PAGAMENTO,
-  MAP_CONDICAO_DE_PAGAMENTO). Nenhum deles é obrigatório (FR-011k): se a grafia real for outra, o
-  arquivo é aceito e o cartão avisa que a coluna não foi encontrada.
+  MAP_CONDICAO_DE_PAGAMENTO). A planilha real de julho/2026 confirmou os onze nomes como estão
+  em FR-011h. Nela, a coluna VALOR é uma fórmula sobre MAP_VALOR, e a aba de dados é a primeira
+  de três (as outras são gráficos e tabela dinâmica).
 - **Valor da autorização**: confirmado que vale a coluna VALOR; MAP_VALOR é apenas guardado.
 - **Solicitação como identificador**: MAP_SOLICITACAO traz a descrição seguida de um número
   ("CESTA BASICA PARA DOACAO - 00951"). Por ser campo obrigatório, entra na comparação entre
@@ -600,8 +609,9 @@ processada não oferece exclusão.
 - **Valor do pagamento**: confirmado que o valor a conciliar é o valor pago (VL_RECEBIDO), que já
   reflete juros e descontos, e não o valor da obrigação (VL_OBRIGACAO).
 - **Identificador do pagamento**: nos arquivos reais, o número da obrigação se repete em linhas de
-  códigos de operação diferentes; falta confirmar com o time financeiro que não se repete de
-  outra forma. O movimento de conta entra no identificador para distinguir duas liquidações
+  códigos de operação diferentes. No relatório de julho/2026 da Unidade de Saúde, os 3.461
+  lançamentos importados têm identificadores distintos; falta confirmar com o time financeiro
+  que isso vale sempre. O movimento de conta entra no identificador para distinguir duas liquidações
   parciais da mesma obrigação.
 - **Dados de folha no relatório**: o relatório do ERP traz pagamentos de salários e ressarcimentos
   com nome de pessoas. Este módulo os guarda como os demais lançamentos; restringir quem os vê não

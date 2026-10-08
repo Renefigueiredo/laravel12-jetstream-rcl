@@ -253,7 +253,7 @@ testada de forma independente.
 - [X] T076 [P] Rever `lang/pt_BR/conciliation.php` e as três telas em `resources/views/livewire/sessions/`: nenhum texto fixo, contraste, navegação por teclado e rótulos para leitor de tela (Princípio II)
 - [X] T077 [P] Atualizar `TECH_STACK.md`: trocar a citação de `TeamPolicy` pelo modelo de papéis do Princípio VIII e registrar OpenSpout e as versões reais de Livewire e Tailwind
 - [X] T078 Rodar `vendor/bin/pint --dirty --format agent` e `php artisan test --compact tests/Unit/Conciliation tests/Feature/Conciliation`; perguntar ao responsável se deseja rodar a suíte completa
-- [ ] T079 Executar o roteiro de `specs/001-session-file-import/quickstart.md` com planilhas fictícias e registrar no próprio arquivo qualquer passo que divergir
+- [X] T079 Executar o roteiro de `specs/001-session-file-import/quickstart.md` com planilhas fictícias e registrar no próprio arquivo qualquer passo que divergir
 
 ---
 

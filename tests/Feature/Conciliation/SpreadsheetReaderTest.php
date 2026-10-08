@@ -8,10 +8,29 @@ use DateTimeImmutable;
 use DateTimeInterface;
 use Tests\Concerns\BuildsSpreadsheets;
 use Tests\TestCase;
+use ZipArchive;
 
 class SpreadsheetReaderTest extends TestCase
 {
     use BuildsSpreadsheets;
+
+    /**
+     * Store calculated values next to the formulas of the first sheet, as Excel does when saving.
+     *
+     * @param  array<string, string>  $replacements
+     */
+    protected function setCalculatedValues(string $path, array $replacements): void
+    {
+        $zip = new ZipArchive;
+        $zip->open($path);
+
+        $sheet = (string) $zip->getFromName('xl/worksheets/sheet1.xml');
+
+        $this->assertStringContainsString(array_key_first($replacements), $sheet);
+
+        $zip->addFromString('xl/worksheets/sheet1.xml', strtr($sheet, $replacements));
+        $zip->close();
+    }
 
     /**
      * @return array<int, array<int, mixed>>
@@ -39,6 +58,23 @@ class SpreadsheetReaderTest extends TestCase
         $this->assertSame(240.8, $rows[2][1]);
         $this->assertInstanceOf(DateTimeInterface::class, $rows[2][2]);
         $this->assertSame('2026-07-27', $rows[2][2]->format('Y-m-d'));
+    }
+
+    public function test_formula_cells_are_read_by_their_calculated_value(): void
+    {
+        $this->xlsxFile(['VALOR', 'VAZIO', 'SEM_CALCULO'], [['VALOR' => '=1+2', 'VAZIO' => '=A1', 'SEM_CALCULO' => '=3+4']]);
+
+        $this->setCalculatedValues($this->lastSpreadsheetPath, [
+            '<f>1+2</f>' => '<f>1+2</f><v>3895.73</v>',
+            '<c r="B2" s="0"><f>A1</f>' => '<c r="B2" s="0" t="str"><f>A1</f><v></v>',
+        ]);
+
+        $rows = $this->read($this->lastSpreadsheetPath);
+
+        $this->assertSame(3895.73, $rows[2][0]);
+        $this->assertSame('', $rows[2][1]);
+        $this->assertNotSame('=3+4', $rows[2][2]);
+        $this->assertNotSame('3+4', $rows[2][2]);
     }
 
     public function test_it_reads_only_the_first_sheet_and_counts_the_sheets(): void

@@ -192,9 +192,10 @@ class RejectSpreadsheetTest extends TestCase
         $this->assertSame(ImportAttemptStatus::Rejected, $attempt->status);
         $this->assertSame(0, $attempt->error_count);
 
-        foreach (app(AuthorizationsLayout::class)->requiredHeaders() as $header) {
-            $this->assertStringContainsString($header, $attempt->message);
-        }
+        $this->assertSame(__('conciliation.errors.missing_headers', [
+            'columns' => implode(', ', app(AuthorizationsLayout::class)->requiredHeaders()),
+            'layout' => 'Autorizações',
+        ]), $attempt->message);
 
         Livewire::actingAs($session->creator)
             ->test(Show::class, ['session' => $session])

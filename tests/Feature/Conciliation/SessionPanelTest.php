@@ -115,6 +115,18 @@ class SessionPanelTest extends TestCase
             ->assertSee(__('conciliation.errors.same_file_other_slot'));
     }
 
+    public function test_upload_that_fails_to_reach_the_server_is_explained_in_portuguese(): void
+    {
+        $session = ReconciliationSession::factory()->create();
+
+        Livewire::actingAs($session->creator)
+            ->test(Show::class, ['session' => $session])
+            ->call('_uploadErrored', 'uploads.authorizations', null, false)
+            ->assertHasErrors('uploads.authorizations')
+            ->assertSee(__('validation.uploaded', ['attribute' => 'Autorizações']))
+            ->assertDontSee('failed to upload');
+    }
+
     public function test_panel_polls_only_while_work_is_in_progress(): void
     {
         $session = ReconciliationSession::factory()->create();

@@ -244,6 +244,7 @@ Todo modelo novo tem factory. `ReconciliationSessionFactory` tem os estados `pro
 | `upload.max_size_mb` | 50 | FR-009 |
 | `upload.disk` | `local` | disco privado |
 | `upload.insert_chunk` | 500 | lote de gravação |
+| `upload.blank_rows_limit` | 10000 | linhas em branco seguidas que encerram a leitura (FR-010g) |
 | `attempts.confirmation_ttl_minutes` | 30 | expiração da confirmação de divergência |
 | `attempts.retention_hours` | 24 | retenção de tentativas e relatórios de erro |
 | `stale.attempt_minutes` | 30 | envio parado em fila, validação ou gravação vira falha (FR-027a) |

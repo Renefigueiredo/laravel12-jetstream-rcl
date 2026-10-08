@@ -14,7 +14,9 @@ Formato dos arquivos que o sistema recebe. É o contrato com o ERP (pagamentos) 
   recusa o arquivo. As outras colunas do layout são lidas quando presentes. Quando faltam, o
   arquivo é aceito, o campo fica vazio e o nome da coluna é guardado em
   `import_files.missing_columns` para aviso no cartão.
-- Linhas totalmente em branco são puladas.
+- Linhas totalmente em branco são puladas. Depois de `conciliation.upload.blank_rows_limit` linhas
+  em branco seguidas (10.000), a leitura termina.
+- Células com fórmula são lidas pelo valor calculado guardado na planilha.
 - Espaços no início e no fim de cada campo são desconsiderados.
 - Tamanho máximo: `conciliation.upload.max_size_mb` (50 MB).
 

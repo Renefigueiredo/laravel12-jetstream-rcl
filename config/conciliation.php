@@ -16,6 +16,7 @@ return [
         'max_size_mb' => (int) env('CONCILIATION_UPLOAD_MAX_SIZE_MB', 50),
         'disk' => env('CONCILIATION_UPLOAD_DISK', 'local'),
         'insert_chunk' => (int) env('CONCILIATION_UPLOAD_INSERT_CHUNK', 500),
+        'blank_rows_limit' => (int) env('CONCILIATION_UPLOAD_BLANK_ROWS_LIMIT', 10000),
     ],
 
     /*
