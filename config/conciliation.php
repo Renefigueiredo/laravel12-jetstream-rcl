@@ -21,6 +21,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Excluded Operation Codes
+    |--------------------------------------------------------------------------
+    |
+    | Limits for the spreadsheet that adds operation codes to the list of
+    | codes left out of the reconciliation.
+    |
+    */
+
+    'excluded_codes' => [
+        'max_size_mb' => (int) env('CONCILIATION_EXCLUDED_CODES_MAX_SIZE_MB', 5),
+        'max_rows' => (int) env('CONCILIATION_EXCLUDED_CODES_MAX_ROWS', 10000),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Import Attempts
     |--------------------------------------------------------------------------
     |

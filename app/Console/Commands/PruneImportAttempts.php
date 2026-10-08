@@ -3,7 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Actions\Conciliation\CancelImportAttempt;
+use App\Enums\ExcludedCodeImportStatus;
 use App\Enums\ImportAttemptStatus;
+use App\Models\ExcludedCodeImport;
 use App\Models\ImportAttempt;
 use Illuminate\Console\Command;
 
@@ -65,8 +67,44 @@ class PruneImportAttempts extends Command
             })
             ->count();
 
+        $stalled += $this->failStalledExcludedCodeImports();
+        $removed += $this->removeOldExcludedCodeImports();
+
         $this->info("Expired confirmations: {$expired}. Stalled uploads: {$stalled}. Removed attempts: {$removed}.");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * An import of excluded codes that stopped moving no longer blocks its user.
+     */
+    protected function failStalledExcludedCodeImports(): int
+    {
+        return ExcludedCodeImport::query()
+            ->whereIn('status', ExcludedCodeImportStatus::inProgress())
+            ->where('updated_at', '<', now()->subMinutes((int) config('conciliation.stale.attempt_minutes')))
+            ->get()
+            ->each(fn (ExcludedCodeImport $import): bool => $import->update([
+                'status' => ExcludedCodeImportStatus::Failed,
+                'failure_message' => __('conciliation.excluded_codes.import.stalled'),
+                'finished_at' => now(),
+            ]))
+            ->count();
+    }
+
+    /**
+     * Completed imports are kept as audit evidence; refused and failed ones changed nothing.
+     */
+    protected function removeOldExcludedCodeImports(): int
+    {
+        return ExcludedCodeImport::query()
+            ->whereIn('status', [ExcludedCodeImportStatus::Rejected, ExcludedCodeImportStatus::Failed])
+            ->where('updated_at', '<', now()->subHours((int) config('conciliation.attempts.retention_hours')))
+            ->get()
+            ->each(function (ExcludedCodeImport $import): void {
+                $import->deleteStoredFile();
+                $import->delete();
+            })
+            ->count();
     }
 }
