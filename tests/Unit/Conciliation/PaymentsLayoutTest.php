@@ -35,6 +35,15 @@ class PaymentsLayoutTest extends TestCase
         $this->assertSame('DT_LIQUIDACAO', $this->layout()->periodDateColumn());
     }
 
+    public function test_card_is_read_from_the_species_of_card_invoices(): void
+    {
+        $invoice = $this->layout()->parse($this->row(['ESPECIE' => 'FATURA CARTAO 7607 (7613)']), [], 2, ImportSlot::PaymentsSaude);
+        $other = $this->layout()->parse($this->row(['ESPECIE' => 'NOTA FISCAL FORNECED']), [], 3, ImportSlot::PaymentsSaude);
+
+        $this->assertSame('7607', $invoice->attributes['card']);
+        $this->assertNull($other->attributes['card']);
+    }
+
     public function test_only_row_mandatory_columns_are_required_headers(): void
     {
         $this->assertEqualsCanonicalizing(

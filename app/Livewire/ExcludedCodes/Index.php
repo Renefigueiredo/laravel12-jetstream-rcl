@@ -139,6 +139,38 @@ class Index extends Component implements HasActions, HasSchemas, HasTable
             : null;
     }
 
+    /**
+     * The name the ERP gives the typed code and how many imported payments carry it, so that
+     * a code typed for the wrong operation is noticed before it is saved.
+     *
+     * @return array{name: string|null, payments: int}|null
+     */
+    #[Computed]
+    public function codeUsage(): ?array
+    {
+        $code = OperationCode::normalize($this->form->code);
+
+        if ($code === null || ! OperationCode::isValid($code)) {
+            return null;
+        }
+
+        $usage = app(ExcludedOperationCodes::class)->usageOf($code);
+
+        return $usage['payments'] === 0 ? null : $usage;
+    }
+
+    /**
+     * Take the name the ERP gives the code as its description.
+     */
+    public function useErpNameAsDescription(): void
+    {
+        $this->authorize('manage-excluded-codes');
+
+        if ($this->codeUsage !== null && filled($this->codeUsage['name'])) {
+            $this->form->description = mb_substr((string) $this->codeUsage['name'], 0, OperationCode::DESCRIPTION_MAX_LENGTH);
+        }
+    }
+
     public function openAddModal(): void
     {
         $this->authorize('manage-excluded-codes');

@@ -8,7 +8,8 @@ teste de Unit do `Matcher` e de seus componentes.
 | Parâmetro | Origem | Valor inicial |
 |-----------|--------|---------------|
 | tolerância em valor | `reconciliation_settings.tolerance_cents` | R$ 0,50 |
-| tolerância percentual | `reconciliation_settings.tolerance_basis_points` | nenhuma |
+| tolerância percentual | `reconciliation_settings.tolerance_basis_points` | 1% |
+| teto da tolerância percentual | `reconciliation_settings.tolerance_cap_cents` | R$ 200,00 |
 | teto de acréscimo | `reconciliation_settings.surcharge_cap_basis_points` | 10% |
 | nota automática | `conciliation.engine.automatic_threshold` | 90 |
 | nota mínima de sugestão | `conciliation.engine.suggestion_threshold` | 60 |
@@ -16,7 +17,14 @@ teste de Unit do `Matcher` e de seus componentes.
 | janela de meses anteriores | `conciliation.engine.lookback_months` | 3 |
 | candidatos guardados por autorização | `conciliation.engine.suggestions_per_authorization` | 5 |
 
-Tolerância efetiva para um saldo: `max(valor fixo, percentual × saldo)`.
+Tolerância efetiva para um saldo: `max(valor fixo, min(percentual × saldo, teto))`.
+
+| Saldo | Tolerância efetiva (0,50; 1%; teto 200,00) |
+|-------|--------------------------------------------|
+| 40,00 | 0,50 |
+| 1.000,00 | 10,00 |
+| 20.000,00 | 200,00 |
+| 50.000,00 | 200,00 |
 
 ## Normalização do nome do fornecedor
 
@@ -70,11 +78,14 @@ Todas as condições precisam valer:
 
 1. nota ≥ nota automática;
 2. diferença dentro da tolerância efetiva;
-3. data do pagamento igual ou posterior à data da autorização;
-4. os cartões não são diferentes (quando os dois lados têm cartão identificado);
-5. o par não está bloqueado (rejeitado ou desvinculado antes);
-6. o pagamento é o único de melhor nota para a autorização, e a autorização é a única de melhor
-   nota para o pagamento, depois do desempate pelo cartão e, em seguida, pela forma de pagamento.
+3. os cartões não são diferentes (quando os dois lados têm cartão identificado);
+4. o par não está bloqueado (rejeitado ou desvinculado antes);
+5. o pagamento é o único melhor para a autorização, e a autorização é a única melhor para o
+   pagamento. "Melhor" é a maior nota e, entre notas iguais, a menor diferença de valor. O que
+   ainda empatar passa pelo desempate do cartão e, em seguida, da forma de pagamento.
+
+O pagamento anterior à autorização vincula normalmente; o par leva a marca
+`paid_before_authorization`.
 
 | Situação | Resultado |
 |----------|-----------|
@@ -87,8 +98,10 @@ Todas as condições precisam valer:
 | Autorização sem cartão (boleto), um único pagamento compatível, de fatura de cartão | vincula |
 | Duas autorizações idênticas, um pagamento | Dúbio para as duas, `is_tie` |
 | Autorização da sessão e autorização antiga empatadas para um pagamento | Dúbio para as duas |
-| Pagamento de 10/07, autorização de 15/07, valor e fornecedor iguais | Dúbio, `paid_before_authorization` |
-| Mesma data nos dois | vincula |
+| Pagamento de 10/07, autorização de 15/07, valor e fornecedor iguais | vincula, com `paid_before_authorization` |
+| Mesma data nos dois | vincula, sem a marca |
+| Autorizações de 1.000,00 e 1.005,00, pagamento de 1.000,00, tolerância de 1% | vincula a de 1.000,00 |
+| Autorização de 1.000,00, pagamentos de 1.003,00 e 997,00, tolerância de 1% | Dúbio para os dois, `is_tie` |
 | Par rejeitado em execução anterior | não vincula, não sugere |
 | Pagamento com código excluído | não entra; `reconciliation_skips` |
 
@@ -141,7 +154,7 @@ precisa atingir a nota automática.
 | 900,00, `3x` | 300,00 e 300,00 na mesma sessão | os dois, em ordem de data |
 | 900,00, `3x`, saldo 200,00 | 300,00 | não cabe; sugestão Excedente |
 | Duas autorizações `3x` de 900,00 do mesmo fornecedor | 300,00 | nenhum vínculo; Dúbio para as duas |
-| 900,00, `3x` | 300,00 com data anterior à autorização | sugestão, `paid_before_authorization` |
+| 900,00, `3x` | 300,00 com data anterior à autorização | vincula como parcela, com `paid_before_authorization` |
 | 900,00, `3x`, cartão 0798 | 300,00 da fatura do cartão 4931 | sugestão, `card_mismatch` |
 
 ## Sessões anteriores

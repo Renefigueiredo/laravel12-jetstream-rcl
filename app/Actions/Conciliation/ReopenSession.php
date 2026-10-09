@@ -2,6 +2,7 @@
 
 namespace App\Actions\Conciliation;
 
+use App\Contracts\ReconciliationEngine;
 use App\Contracts\ReconciliationResultInspector;
 use App\Enums\AuditAction;
 use App\Enums\SessionStatus;
@@ -13,7 +14,11 @@ use Illuminate\Support\Facades\Gate;
 
 class ReopenSession
 {
-    public function __construct(protected AuditRecorder $audit, protected ReconciliationResultInspector $inspector) {}
+    public function __construct(
+        protected AuditRecorder $audit,
+        protected ReconciliationResultInspector $inspector,
+        protected ReconciliationEngine $engine,
+    ) {}
 
     /**
      * Return a processed session to the open status so that a spreadsheet can be replaced.
@@ -36,6 +41,8 @@ class ReopenSession
             if ($blockingDecisions > 0) {
                 throw new ActionRefusedException(trans_choice('conciliation.sessions.reopen.blocked', $blockingDecisions, ['count' => $blockingDecisions]));
             }
+
+            $this->engine->discardResult($session);
 
             $session->update(['status' => SessionStatus::Open, 'result_stale' => true, 'progress' => null]);
 

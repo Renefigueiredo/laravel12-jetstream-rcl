@@ -3,10 +3,11 @@
 namespace Database\Factories;
 
 use App\Models\ImportFile;
+use App\Models\PaymentEntry;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\PaymentEntry>
+ * @extends Factory<PaymentEntry>
  */
 class PaymentEntryFactory extends Factory
 {
@@ -37,6 +38,7 @@ class PaymentEntryFactory extends Factory
             'source_document' => null,
             'settlement_status' => 'LIQUIDADO',
             'account_movement' => $movement,
+            'card' => null,
             'identity_key' => $obligation.'|20150652|'.$movement,
             'raw' => [],
         ];

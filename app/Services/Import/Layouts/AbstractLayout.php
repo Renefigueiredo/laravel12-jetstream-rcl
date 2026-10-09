@@ -45,6 +45,17 @@ abstract class AbstractLayout implements SpreadsheetLayout
     }
 
     /**
+     * Attributes computed from the ones already read from the row.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    protected function derivedAttributes(array $attributes): array
+    {
+        return [];
+    }
+
+    /**
      * @return list<string>
      */
     public function requiredHeaders(): array
@@ -90,6 +101,7 @@ abstract class AbstractLayout implements SpreadsheetLayout
         }
 
         $attributes = [...$attributes, ...$this->slotAttributes($slot)];
+        $attributes = [...$attributes, ...$this->derivedAttributes($attributes)];
 
         /** @var CarbonImmutable $periodDate */
         $periodDate = $attributes[$columns[$this->periodDateColumn()]['attribute']];

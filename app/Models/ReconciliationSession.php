@@ -4,15 +4,18 @@ namespace App\Models;
 
 use App\Enums\ImportFileStatus;
 use App\Enums\ImportSlot;
+use App\Enums\ReconciliationRunStatus;
 use App\Enums\SessionStatus;
+use Database\Factories\ReconciliationSessionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ReconciliationSession extends Model
 {
-    /** @use HasFactory<\Database\Factories\ReconciliationSessionFactory> */
+    /** @use HasFactory<ReconciliationSessionFactory> */
     use HasFactory;
 
     /**
@@ -72,6 +75,49 @@ class ReconciliationSession extends Model
     public function importAttempts(): HasMany
     {
         return $this->hasMany(ImportAttempt::class);
+    }
+
+    /**
+     * @return HasMany<ReconciliationRun, $this>
+     */
+    public function runs(): HasMany
+    {
+        return $this->hasMany(ReconciliationRun::class);
+    }
+
+    /**
+     * The run whose result is in effect: the latest completed one.
+     *
+     * @return HasOne<ReconciliationRun, $this>
+     */
+    public function currentRun(): HasOne
+    {
+        return $this->hasOne(ReconciliationRun::class)
+            ->ofMany(['id' => 'max'], fn ($query) => $query->where('status', ReconciliationRunStatus::Completed));
+    }
+
+    /**
+     * The cards named by the authorizations or found in the card invoices of the session.
+     *
+     * @return list<string>
+     */
+    public function cards(): array
+    {
+        return AuthorizationEntry::query()
+            ->where('reconciliation_session_id', $this->id)
+            ->whereNotNull('card')
+            ->toBase()
+            ->select('card')
+            ->union(PaymentEntry::query()
+                ->where('reconciliation_session_id', $this->id)
+                ->whereNotNull('card')
+                ->toBase()
+                ->select('card'))
+            ->pluck('card')
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
     }
 
     /**

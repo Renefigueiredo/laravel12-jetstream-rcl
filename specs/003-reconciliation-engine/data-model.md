@@ -14,7 +14,7 @@ inteiros, percentuais em pontos-base (1% = 100), datas e horas em UTC. Decisões
 | `LinkOrigin` | `Automatic`, `Manual` | Quem criou o vínculo |
 | `DifferenceType` | `Exact`, `Partial`, `Excess` | Diferença de valor no momento do vínculo |
 | `DifferenceTreatment` | `StillOwed`, `Discount`, `AcceptedSurcharge`, `Overpayment` | Decisão sobre a diferença |
-| `JustificationCategory` | `CommercialDiscount`, `InterestOrFine`, `Freight`, `PriceAdjustment`, `Rounding`, `Other` | Categoria da justificativa (Princípio VII) |
+| `JustificationCategory` | `CommercialDiscount`, `InterestOrFine`, `Freight`, `PriceAdjustment`, `Rounding`, `WithinTolerance`, `Other` | Categoria da justificativa (Princípio VII) |
 | `AuthorizationStatus` | `Open`, `Partial`, `Reconciled` | Situação derivada da autorização |
 | `SkipReason` | `ExcludedCode`, `DuplicateOfOtherPeriod` | Por que o lançamento ficou fora |
 | `PairBlockReason` | `Rejected`, `Unlinked` | Por que o par não volta a ser sugerido |
@@ -30,7 +30,8 @@ Linha única com os parâmetros que o Administrador altera pela tela.
 |--------|------|--------|
 | `id` | bigint | PK |
 | `tolerance_cents` | unsignedInteger | padrão 50; mínimo 0 |
-| `tolerance_basis_points` | unsignedInteger | opcional; de 0 a 10000 |
+| `tolerance_basis_points` | unsignedInteger | opcional; de 0 a 10000; inicial 100 |
+| `tolerance_cap_cents` | unsignedInteger | opcional; teto da parte percentual; inicial 20000 |
 | `surcharge_cap_basis_points` | unsignedInteger | padrão 1000; de 0 a 10000 |
 | `updated_by` | FK `users` | opcional; `restrictOnDelete` |
 | `created_at`, `updated_at` | timestamp | |
@@ -47,7 +48,7 @@ Uma linha por execução. Nunca é apagada.
 | `reconciliation_session_id` | FK | `restrictOnDelete`; indexado |
 | `status` | string | `ReconciliationRunStatus`; indexado |
 | `requested_by` | FK `users` | `restrictOnDelete` |
-| `tolerance_cents`, `tolerance_basis_points` | inteiros | cópia dos parâmetros usados |
+| `tolerance_cents`, `tolerance_basis_points`, `tolerance_cap_cents` | inteiros | cópia dos parâmetros usados |
 | `surcharge_cap_basis_points` | inteiro | cópia |
 | `automatic_threshold`, `suggestion_threshold`, `supplier_threshold` | unsignedSmallInteger | de `config` |
 | `lookback_months` | unsignedSmallInteger | de `config` |
@@ -95,12 +96,13 @@ Ligação entre uma autorização e um pagamento.
 | `engine_classification` | string | opcional; `MatchClassification` |
 | `score`, `supplier_score`, `amount_score` | unsignedSmallInteger | opcionais; 0 a 100 |
 | `difference_type` | string | `DifferenceType` |
+| `difference_cents` | bigInteger | pagamento menos saldo no momento do vínculo, com sinal |
 | `excess_cents` | unsignedBigInteger | padrão 0; quanto o pagamento passou do saldo |
 | `treatment` | string | opcional; `DifferenceTreatment` |
 | `discount_cents` | unsignedBigInteger | padrão 0 |
 | `tolerance_writeoff_cents` | unsignedBigInteger | padrão 0; resto absorvido pela tolerância |
 | `surcharge_cap_basis_points` | unsignedInteger | opcional; teto vigente na decisão de acréscimo |
-| `justification_category` | string | opcional; `JustificationCategory`; obrigatória em `Discount` e `AcceptedSurcharge`; `Rounding` quando há resto absorvido pela tolerância |
+| `justification_category` | string | opcional; `JustificationCategory`; obrigatória em `Discount` e `AcceptedSurcharge`; `WithinTolerance` quando há resto absorvido pela tolerância |
 | `justification` | string(500) | obrigatória em `Discount` e `AcceptedSurcharge` |
 | `paid_before_authorization` | boolean | padrão falso; indexado |
 | `card_mismatch` | boolean | padrão falso; cartões identificados e diferentes |

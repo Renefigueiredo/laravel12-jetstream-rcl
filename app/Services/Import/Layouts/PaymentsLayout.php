@@ -4,6 +4,7 @@ namespace App\Services\Import\Layouts;
 
 use App\Enums\ImportSlot;
 use App\Enums\SpreadsheetLayoutType;
+use App\Services\Reconciliation\Matching\CardNumberExtractor;
 
 class PaymentsLayout extends AbstractLayout
 {
@@ -84,6 +85,16 @@ class PaymentsLayout extends AbstractLayout
     protected function slotAttributes(ImportSlot $slot): array
     {
         return ['unit' => $slot->unit()?->value];
+    }
+
+    protected function derivedAttributes(array $attributes): array
+    {
+        return [
+            'card' => CardNumberExtractor::extract(
+                $attributes['species'] ?? null,
+                (string) config('conciliation.engine.card_species_marker'),
+            ),
+        ];
     }
 
     protected function identityKey(array $attributes, ImportSlot $slot): string

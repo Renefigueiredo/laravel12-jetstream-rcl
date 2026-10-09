@@ -55,6 +55,16 @@
 - Q: Que categorias de justificativa valem para desconto e acréscimo aceito? → A: Desconto
   comercial, juros ou multa, frete, reajuste de preço, arredondamento e outro, sempre com o texto
   da justificativa.
+- Q: (revisão, depois de conferir a primeira execução com os dados reais) Um pagamento anterior à
+  autorização pode ser conciliado automaticamente? → A: Sim. Segue as mesmas regras dos demais e
+  é conciliado sozinho, com o aviso "Pago antes da autorização" e presença na aba própria. Esta
+  resposta substitui a anterior.
+- Q: Como tratar a autorização em nome de um único fornecedor (por exemplo, Mercado Livre) cujo
+  pedido é pago a vários vendedores? → A: Pelo vínculo manual de vários pagamentos a uma
+  autorização, de uma só vez. A sugestão automática da combinação fica para depois de conferida
+  a fatura de agosto.
+- Q: Que diferença de valor é conciliada automaticamente? → A: Até R$ 0,50, ou até 1% do valor
+  limitado a R$ 200,00, para mais ou para menos. O par conciliado com diferença fica sinalizado.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -125,8 +135,8 @@ e conferir que cada item caiu na classificação esperada e que o resumo bate co
     vindo de fatura de cartão, **When** a conciliação é executada, **Then** o par é conciliado
     normalmente, porque não há empate.
 18. **Given** uma autorização datada de 15/07 e um pagamento de 10/07 de mesmo valor e mesmo
-    fornecedor, **When** a conciliação é executada, **Then** nenhum vínculo automático é feito e
-    o par fica "Dúbio" com o aviso "Pago antes da autorização".
+    fornecedor, **When** a conciliação é executada, **Then** o par é conciliado automaticamente,
+    com o aviso "Pago antes da autorização".
 19. **Given** uma autorização e um pagamento de mesma data, **When** a conciliação é executada,
     **Then** a regra de data não se aplica e o par é conciliado normalmente.
 20. **Given** uma sessão já processada, **When** um código é adicionado à lista ou removido
@@ -186,8 +196,9 @@ e buscar um fornecedor.
    **When** o Operador abre as pendências da sessão, **Then** ela não aparece como "Sem pagamento"
    nesta sessão; continua pendente na sessão de origem.
 10. **Given** uma sessão processada, **When** o Operador abre a aba "Pagos antes da autorização",
-    **Then** vê todos os pares em que a data do pagamento é anterior à da autorização, com as
-    duas datas e a situação de cada um (aguardando decisão, confirmado ou rejeitado).
+    **Then** vê todos os pares em que a data do pagamento é anterior à da autorização: os já
+    conciliados (sozinhos ou por decisão) e os que aguardam decisão ou foram rejeitados, com as
+    duas datas.
 11. **Given** um par com o aviso "Pago antes da autorização" confirmado pelo Operador, **When**
     ele é consultado depois, **Then** o aviso continua visível e o par continua na aba.
 
@@ -445,8 +456,16 @@ conferir que só a primeira exige confirmação.
   e o item fica Dúbio com todos os candidatos empatados.
 - **Empate desfeito pela forma de pagamento**: o desempate vale nos dois sentidos, entre
   pagamentos para uma autorização e entre autorizações para um pagamento (FR-012a).
-- **Pagamento anterior à autorização**: nunca é vinculado sozinho; vai para o Operador com o aviso
-  e aparece na aba própria. Vale também para o vínculo automático de parcela.
+- **Pagamento anterior à autorização**: segue as regras normais, inclusive o vínculo automático;
+  o par fica com o aviso e aparece na aba própria.
+- **Diferença dentro do percentual**: uma autorização de R$ 1.000,00 paga com R$ 992,00 ou com
+  R$ 1.006,00 é conciliada sozinha e sinalizada; com R$ 989,00 vai para o Operador. Acima de
+  R$ 20.000,00 o limite deixa de crescer e fica em R$ 200,00.
+- **Pedido de marketplace pago a vários vendedores**: a autorização está em nome do marketplace e
+  os pagamentos vêm no nome de cada vendedor. O motor não os aproxima, porque o fornecedor não
+  bate; o Operador seleciona os pagamentos e os vincula de uma vez (FR-029a).
+- **Dois candidatos dentro da tolerância**: vence o de valor mais próximo; um par exato nunca é
+  segurado por um par apenas próximo.
 - **Cartão diferente**: nunca é vinculado sozinho; vai para o Operador com o aviso. Vale também
   para o vínculo automático de parcela.
 - **Fatura de cartão sem nenhuma autorização na sessão** (caso real: cartão 7222): o cartão
@@ -583,11 +602,17 @@ conferir que só a primeira exige confirmação.
   com os outros pagamentos; se exatamente um dos empatados combinar, ele é o escolhido. Caso
   contrário, o empate permanece. A forma de pagamento NÃO DEVE alterar a nota nem excluir
   candidatos quando não há empate.
-- **FR-012b**: O sistema NÃO DEVE vincular automaticamente, nem como exato nem como parcela, um
-  pagamento com data anterior à data da autorização. O par DEVE ser classificado como "Dúbio"
-  (ou Parcial ou Excedente, conforme o valor) e marcado com o aviso "Pago antes da autorização".
-  O aviso permanece no par depois da confirmação. Mesma data não é anterior; sem data em um dos
-  lados, a regra não se aplica.
+- **FR-012b**: O pagamento com data anterior à data da autorização DEVE seguir as mesmas regras
+  dos demais, inclusive a conciliação automática. O par, vinculado ou sugerido, DEVE ficar marcado
+  com o aviso "Pago antes da autorização", que permanece depois de qualquer decisão. Mesma data
+  não é anterior; sem data em um dos lados, o aviso não se aplica.
+- **FR-012d**: Havendo mais de um candidato com a mesma nota, o sistema DEVE preferir o de menor
+  diferença de valor, antes dos desempates de FR-012a. O empate só permanece entre candidatos de
+  mesma nota e mesma diferença.
+- **FR-012e**: O par conciliado automaticamente com diferença de valor acima da tolerância em
+  valor fixo DEVE guardar a diferença, com sinal, e ficar sinalizado como "Conciliado com
+  diferença", a menor ou a maior. A lista de conciliados DEVE poder ser filtrada por essa
+  sinalização, e o resumo da sessão DEVE mostrar a quantidade e a soma dessas diferenças.
 - **FR-012c**: O sistema DEVE identificar o cartão do pagamento pelos quatro primeiros dígitos que
   seguem "FATURA CARTAO" na espécie do documento, desconsiderando o que vier depois (por exemplo,
   "FATURA CARTAO 7607 (7613)" é o cartão 7607). Quando a autorização e o pagamento têm cartão
@@ -662,7 +687,7 @@ conferir que só a primeira exige confirmação.
   - **FR-028a**: "Encerrar com desconto" e "Acréscimo aceito" DEVEM exigir uma categoria de
     justificativa (desconto comercial, juros ou multa, frete, reajuste de preço, arredondamento
     ou outro) e o texto da justificativa. O resto absorvido automaticamente pela tolerância fica
-    registrado com a categoria "arredondamento".
+    registrado com a categoria "dentro da tolerância".
   - **FR-028b**: "Acréscimo aceito" só DEVE estar disponível quando o valor excedido não
     ultrapassar um teto percentual sobre o valor autorizado. O teto DEVE ser um parâmetro do
     sistema, com valor inicial de 10%, alterável por quem configura a tolerância.
@@ -679,6 +704,11 @@ conferir que só a primeira exige confirmação.
   uma autorização da sessão ou a uma autorização em aberto de sessão anterior dentro da janela
   (FR-031), calculando o tipo de diferença. Pagamentos excluídos por código não podem ser
   vinculados (FR-004b).
+- **FR-029a**: O vínculo manual DEVE permitir selecionar vários pagamentos para a mesma
+  autorização em uma única ação, de qualquer fornecedor, mostrando a soma selecionada e o saldo
+  da autorização. Cada pagamento gera o seu vínculo e o seu registro de auditoria. Só o último
+  pagamento pode deixar diferença a decidir; se os anteriores já cobrirem o saldo, a seleção é
+  recusada. A lista de pagamentos DEVE trazer primeiro os do mesmo cartão da autorização.
 - **FR-030**: O sistema DEVE permitir desvincular qualquer par conciliado, devolvendo os dois
   lançamentos às pendências e recalculando o saldo da autorização.
 - **FR-031**: Ao executar uma sessão, o sistema DEVE incluir na comparação as autorizações com
@@ -741,9 +771,11 @@ conferir que só a primeira exige confirmação.
 **Tolerância**
 
 - **FR-034**: O sistema DEVE permitir configurar uma tolerância global em valor fixo, em
-  percentual, ou em ambos. Com ambos, dois valores são compatíveis quando a diferença cabe em
-  qualquer um dos dois.
-- **FR-035**: A tolerância inicial DEVE ser de R$ 0,50, sem percentual.
+  percentual, ou em ambos, e um teto em reais para a parte percentual. Dois valores são
+  compatíveis quando a diferença, para mais ou para menos, cabe no valor fixo ou no percentual
+  limitado ao teto.
+- **FR-035**: A tolerância inicial DEVE ser de R$ 0,50 em valor fixo e de 1% com teto de
+  R$ 200,00.
 - **FR-036**: A alteração da tolerância DEVE valer apenas para execuções iniciadas depois dela.
 - **FR-037**: Somente usuários com a permissão de configurar a tolerância DEVEM poder alterá-la.
 
@@ -760,6 +792,10 @@ conferir que só a primeira exige confirmação.
 - **FR-041**: Operadores e Administradores DEVEM poder executar a conciliação e tomar todas as
   decisões sobre pendências, inclusive encerrar com desconto e aceitar acréscimo, em qualquer
   sessão e para as duas unidades.
+- **FR-041a**: Criar a autorização correspondente a um pagamento sem autorização DEVE ser
+  permitido somente ao Administrador, com justificativa obrigatória de até 500 caracteres,
+  registrada na autorização criada e na auditoria. O Operador vê o pagamento na fila e pode
+  vinculá-lo a uma autorização existente, mas não vê a ação de criar.
 - **FR-042**: O sistema DEVE informar ao Módulo 1 quantas decisões manuais existem em uma sessão
   e quantas de suas autorizações estão vinculadas a pagamentos de sessões posteriores (FR-031e),
   para que a reabertura seja bloqueada enquanto houver alguma.

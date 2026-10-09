@@ -83,7 +83,7 @@ posteriores (somente leitura para estes, com a indicação da sessão do pagamen
 | Elemento | Comportamento |
 |----------|---------------|
 | Colunas | autorização, pagamento, origem (automático, manual, parcela), nota, tipo de diferença, tratamento, saldo da autorização, avisos |
-| Filtros | origem; tratamento (inclui "Pagamento a maior"); só parcelas; cartão |
+| Filtros | origem; diferença (com diferença, pago a menor, pago a maior); tratamento (inclui "Pagamento a maior"); só parcelas; cartão |
 | Busca | fornecedor |
 
 | Ação | Entrada | Resultado | Recusas |
@@ -92,8 +92,9 @@ posteriores (somente leitura para estes, com a indicação da sessão do pagamen
 
 ### Aba Pagos antes da autorização (`Reconciliation\EarlyPaymentsTable`)
 
-Fonte: sugestões e vínculos da sessão com `paid_before_authorization`. Mostra as duas datas e a
-situação (aguardando decisão, confirmado, rejeitado). As ações são as da linha correspondente.
+Dois blocos. "Conciliados": a tabela de vínculos (`Reconciliation\LinksTable`) restrita aos que
+têm `paid_before_authorization`, sejam automáticos ou por decisão. "Aguardando decisão ou
+rejeitados": as sugestões com a marca, com as duas datas e a situação.
 
 ### Aba Por cartão (`Reconciliation\CardsTable`)
 
@@ -126,6 +127,7 @@ pagamentos de cada um e, abaixo, os pagamentos excluídos, filtráveis por códi
 |-------|--------|
 | Tolerância em valor | reais, com vírgula; de 0,00 a 9.999,99 |
 | Tolerância percentual | opcional; de 0 a 100, com até duas casas |
+| Teto da tolerância percentual | opcional; reais, com vírgula |
 | Teto de acréscimo aceito | de 0 a 100, com até duas casas |
 
 Salvar grava a configuração e a auditoria com os valores anterior e novo. A página avisa que a

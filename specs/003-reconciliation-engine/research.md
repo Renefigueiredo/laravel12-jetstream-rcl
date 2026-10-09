@@ -240,10 +240,9 @@ módulos anteriores são citadas como `001/Rn` e `002/Rn`.
 
 ## R16. Pagamento anterior à autorização (FR-012b, FR-023a)
 
-- **Decision**: o par cuja data de pagamento é anterior à data da autorização nunca entra no
-  vínculo exato nem no de parcela. Vira sugestão, com a marca `paid_before_authorization`, que é
-  copiada para o vínculo quando o Operador confirma. A aba própria lista sugestões e vínculos com
-  a marca.
+- **Decision** (revista em R24): o par cuja data de pagamento é anterior à data da autorização
+  segue as regras normais, inclusive o vínculo automático, e leva a marca
+  `paid_before_authorization`. A aba própria lista os vínculos e as sugestões com a marca.
 
 ## R17. Cartão e forma de pagamento (FR-012a, FR-012c, FR-023b, FR-023c)
 
@@ -307,6 +306,131 @@ módulos anteriores são citadas como `001/Rn` e `002/Rn`.
   (`UNION ALL`, `NOT EXISTS`, subconsulta correlacionada), sem funções de janela específicas.
 - **Risco**: travas de linha e a visão só se provam de fato em PostgreSQL. Continua aberta a
   pendência de rodar a suíte em PostgreSQL, que neste módulo passa a pesar mais.
+
+## R22. Decisões tomadas durante a implementação (até o MVP)
+
+- **Visão de pendências**: depende de a sessão ter uma execução `Completed`, e não da situação
+  "processada" da sessão. Assim os totais podem ser calculados dentro da própria execução, antes
+  de o job marcar a sessão como processada, e somem sozinhos quando o resultado é descartado.
+- **Candidatos por fornecedor distinto**: o índice por palavra aponta para nomes de fornecedor, e
+  não para pagamentos. Um fornecedor com dezenas de pagamentos no mês não vira "palavra comum".
+- **Melhor candidato que exige decisão segura os demais**: se o melhor par de uma autorização
+  precisa de um humano (pago antes da autorização, cartão diferente), o motor não vincula sozinho
+  um candidato pior dela.
+- **Nome de uma palavra só**: fica fora da contenção; conectivos de até duas letras também não
+  contam como palavra em comum.
+- **Quem solicitou a execução**: lido do registro de auditoria `ReconciliationRequested` da
+  sessão, porque o contrato do motor não recebe o usuário.
+- **Aba Fila de investigação**: entra com a História 6. Até lá, os pagamentos sem autorização
+  aparecem pelo filtro "Sem autorização" da aba Pendências.
+- **Atalho na lista de sessões** (T060): a lista continua levando ao painel da sessão, que tem o
+  botão "Abrir conciliação" e o resumo da execução. Não foi criada coluna própria.
+- **Formatação de valores**: `App\Support\Money::format()` é o único lugar que transforma
+  centavos em texto.
+
+## R23. Primeira execução com os arquivos reais de julho/2026
+
+Feita sobre uma cópia do banco local, sem alterar o banco de trabalho. Tempo: menos de 1 segundo.
+
+| Resultado | Quantidade |
+|-----------|------------|
+| Pagamentos na sessão | 3.633 |
+| Excluídos por código | 3.367 |
+| Comparados | 266 |
+| Autorizações | 136 |
+| Conciliadas sozinhas | 27 (19%) |
+| Dúbios | 14 |
+| Parciais | 18 |
+| Excedentes | 22 |
+| Sem pagamento | 59 (41 de cartão) |
+| Sem autorização | 193 |
+
+Observações para a calibração, a decidir com o responsável:
+
+- Os 27 vínculos automáticos têm compatibilidade de fornecedor 100; todos são boleto ou PIX.
+- Nenhuma autorização de cartão conciliou sozinha: as faturas pagas em julho trazem compras de
+  maio e junho, e a regra "pago antes da autorização" manda esses pares ao Operador.
+- 71 pares têm pagamento anterior à autorização.
+- Dos 40 Parciais e Excedentes, 30 também são "pago antes da autorização". A maioria é de
+  fornecedor recorrente (várias compras no mês com valores diferentes), em que o motor aproxima
+  uma autorização de um pagamento de outra compra.
+- Há Dúbios por erro de digitação no nome (nota 86) e por empate entre compras idênticas.
+
+## R24. Revisão das regras depois da primeira execução real (2026-10-08)
+
+O responsável conferiu a primeira execução (os 27 vínculos automáticos estavam certos) e mudou
+duas regras:
+
+- **Pagamento anterior à autorização passa a conciliar sozinho**, com o aviso e presença na aba
+  própria. Substitui a decisão anterior (R16), em que o par ia sempre para o Operador.
+- **Tolerância inicial**: R$ 0,50, ou 1% do valor com teto de R$ 200,00, para mais ou para menos.
+  O teto é uma coluna nova (`tolerance_cap_cents`) na configuração e na execução.
+
+Consequências no desenho:
+
+- **Valor mais próximo vence** (FR-012d): com tolerância larga, um par exato e um par próximo
+  teriam a mesma nota e empatariam. O melhor candidato passa a ser a maior nota e, entre notas
+  iguais, a menor diferença de valor.
+- **Diferença guardada no vínculo** (`difference_cents`, com sinal) e sinalizada quando passa da
+  tolerância em valor fixo; filtro na aba Conciliados e total no resumo.
+- **Categoria do resto absorvido**: "dentro da tolerância", e não mais "arredondamento", que
+  ficaria enganoso para diferenças de até R$ 200,00.
+- **Testes**: os testes de Feature fixam a tolerância em R$ 0,50 sem percentual, e os que tratam
+  da tolerância percentual a definem no próprio teste.
+
+Segunda execução com os dados de julho/2026, sobre uma cópia do banco:
+
+| Resultado | Antes | Depois |
+|-----------|-------|--------|
+| Conciliadas sozinhas | 27 (19%) | 32 (23%) |
+| Dúbios | 14 | 9 |
+| Parciais | 18 | 14 |
+| Excedentes | 22 | 19 |
+| Sem pagamento | 59 | 66 |
+| Pares pagos antes da autorização | 71 | 54 |
+
+Dos 5 vínculos novos, 4 são pagamentos anteriores à autorização e 1 veio da tolerância
+percentual (diferença de R$ 0,63). A regra de 1% quase não muda julho: as diferenças dos
+Parciais e Excedentes estão bem acima de 1%.
+
+## R25. Pedido pago a vários fornecedores (FR-029a)
+
+- **Decision**: `LinkManually` recebe uma lista de pagamentos. Eles são vinculados em ordem de
+  data; todos menos o último entram como "Ainda falta pagar", e o último recebe a decisão do
+  Operador quando sobra diferença. Se os primeiros já cobrem o saldo, a seleção é recusada.
+- **Rationale**: nas compras de marketplace a autorização está em nome do marketplace e a fatura
+  traz cada vendedor. Não há como aproximar pelo fornecedor; quem sabe quais linhas formam o
+  pedido é o Operador. Em julho/2026 há 13 autorizações em nome do Mercado Livre, todas de cartão.
+- **Na tela**: o modal "Vincular" lista os pagamentos livres da sessão, primeiro os do mesmo
+  cartão e depois os de valor mais próximo do saldo, e mostra a soma selecionada.
+- **Adiado**: sugerir sozinho a combinação de linhas cuja soma dá o valor autorizado, para
+  fornecedores marcados como intermediários. Depende de ver a fatura de agosto: se a soma das
+  linhas bate com o pedido e se elas vêm na mesma fatura.
+- **Termo na tela**: a nota de compatibilidade é exibida como "Confiança", em percentual, por
+  escolha do responsável. Os documentos de desenho continuam usando "nota".
+
+## R26. Comparação de fornecedor mais tolerante a erro de digitação (calibração com dados reais)
+
+Ajustes feitos depois de o responsável apontar pares corretos que ficaram como Dúbio. Substituem
+os detalhes de R6; os limites (90 e 60) não mudaram.
+
+- **Letras vizinhas trocadas** ("LAVANDEIRA" por "LAVANDERIA") contam como um erro só.
+- **Palavra com um erro de digitação** ("ALIMENTO" por "ALIMENTOS") é aceita como a mesma
+  palavra, desde que tenha 5 letras ou mais, e vale 85 em vez de 100 na contagem de palavras em
+  comum.
+- **Sufixos societários com grafia errada** (EIRELES, EIRELE, LDTA, LIMITADA) são removidos como
+  os corretos.
+- **Apóstrofo** não separa a palavra ("LIBA'S" vira "LIBAS"), e **iniciais escritas separadas**
+  são unidas ("M F MATERIAIS" vira "MF MATERIAIS").
+- **Conectivos** (DE, DA, DO, DAS, DOS, E, EM) saem da contagem por lista, e não mais por
+  tamanho. Palavras curtas que distinguem a empresa ("FN", "JR") passam a contar.
+- **Semelhança do nome inteiro só vale para automático quando toda palavra do nome mais curto
+  tem correspondente no outro.** Caso contrário fica limitada a 89. Evita conciliar sozinho
+  "FN COMERCIO DE ALIMENTOS" com "JR COMERCIO DE ALIMENTOS", que diferem em duas letras.
+
+Resultado em julho/2026, sobre uma cópia do banco: 37 autorizações conciliadas sozinhas (27%),
+contra 32 antes desses ajustes; os cinco vínculos novos têm fornecedor com erro de digitação na
+autorização. Nenhum par que conciliava sozinho deixou de conciliar.
 
 ## Pendências que dependem do responsável
 

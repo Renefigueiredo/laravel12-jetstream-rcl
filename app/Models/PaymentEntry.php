@@ -3,13 +3,16 @@
 namespace App\Models;
 
 use App\Enums\OperatingUnit;
+use Database\Factories\PaymentEntryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PaymentEntry extends Model
 {
-    /** @use HasFactory<\Database\Factories\PaymentEntryFactory> */
+    /** @use HasFactory<PaymentEntryFactory> */
     use HasFactory;
 
     public const UPDATED_AT = null;
@@ -36,6 +39,7 @@ class PaymentEntry extends Model
         'source_document',
         'settlement_status',
         'account_movement',
+        'card',
         'identity_key',
         'raw',
     ];
@@ -54,6 +58,30 @@ class PaymentEntry extends Model
     public function session(): BelongsTo
     {
         return $this->belongsTo(ReconciliationSession::class, 'reconciliation_session_id');
+    }
+
+    /**
+     * @return HasOne<ReconciliationLink, $this>
+     */
+    public function link(): HasOne
+    {
+        return $this->hasOne(ReconciliationLink::class);
+    }
+
+    /**
+     * @return HasMany<ReconciliationSuggestion, $this>
+     */
+    public function suggestions(): HasMany
+    {
+        return $this->hasMany(ReconciliationSuggestion::class);
+    }
+
+    /**
+     * @return HasMany<ReconciliationSkip, $this>
+     */
+    public function skips(): HasMany
+    {
+        return $this->hasMany(ReconciliationSkip::class);
     }
 
     /**

@@ -48,6 +48,10 @@ class Show extends Component
 
     public bool $confirmingDeletion = false;
 
+    public bool $showingRefusal = false;
+
+    public string $refusalMessage = '';
+
     public function mount(ReconciliationSession $session, CancelImportAttempt $cancelImportAttempt): void
     {
         $this->authorize('view', $session);
@@ -195,7 +199,7 @@ class Show extends Component
         try {
             $deleteSession->handle(auth()->user(), $session);
         } catch (ActionRefusedException $exception) {
-            $this->dispatch('banner-message', style: 'danger', message: $exception->getMessage());
+            $this->showRefusal($exception->getMessage());
             $this->refreshState();
 
             return;
@@ -238,10 +242,16 @@ class Show extends Component
 
             $this->dispatch('banner-message', style: 'success', message: $successMessage);
         } catch (ActionRefusedException $exception) {
-            $this->dispatch('banner-message', style: 'danger', message: $exception->getMessage());
+            $this->showRefusal($exception->getMessage());
         }
 
         $this->refreshState();
+    }
+
+    protected function showRefusal(string $message): void
+    {
+        $this->refusalMessage = $message;
+        $this->showingRefusal = true;
     }
 
     protected function attemptOfSession(int $attemptId): ?ImportAttempt
