@@ -5,6 +5,7 @@ use App\Http\Controllers\ImportErrorReportController;
 use App\Http\Controllers\ImportFileDownloadController;
 use App\Http\Controllers\SpreadsheetTemplateController;
 use App\Livewire\ExcludedCodes\Index as ExcludedCodesIndex;
+use App\Livewire\Reconciliation\Settings as ReconciliationSettings;
 use App\Livewire\Reconciliation\Show as ReconciliationShow;
 use App\Livewire\Sessions\History;
 use App\Livewire\Sessions\Index;
@@ -47,6 +48,10 @@ Route::middleware([
 
     Route::get('/planilhas-modelo/{layout}', SpreadsheetTemplateController::class)
         ->name('templates.download');
+
+    Route::livewire('/conciliacao/tolerancia', ReconciliationSettings::class)
+        ->can('configure-tolerance')
+        ->name('reconciliation.settings');
 
     Route::livewire('/codigos-excluidos', ExcludedCodesIndex::class)
         ->can('manage-excluded-codes')

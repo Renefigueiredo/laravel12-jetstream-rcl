@@ -139,7 +139,7 @@ precisa atingir a nota automática.
 |-------|-----------------------|-----------|------------|-------|------|-----------|
 | 900,00 | 300,00 | 300,00 | 100 | 100 | 100 | parcela |
 | 900,00 | 300,00 | 300,40 | 95 | 100 | 95 | parcela |
-| 900,00 | 300,00 | 300,00 | 89 | 100 | 89 | sugestão (fornecedor abaixo do limite) |
+| 900,00 | 300,00 | 300,00 | 89 | 100 | 89 | sem vínculo de parcela (fornecedor abaixo do limite) |
 | 900,00 | 300,00 | 300,51 | 100 | 99 | 99 | sugestão Parcial (fora da tolerância da parcela) |
 
 | Autorização | Pagamentos disponíveis | Resultado |
@@ -153,7 +153,9 @@ precisa atingir a nota automática.
 | 1.000,00, `A vista`, um vínculo de 100,00 "Ainda falta pagar" | 100,00 | vincula como parcela |
 | 900,00, `3x` | 300,00 e 300,00 na mesma sessão | os dois, em ordem de data |
 | 900,00, `3x`, saldo 200,00 | 300,00 | não cabe; sugestão Excedente |
-| Duas autorizações `3x` de 900,00 do mesmo fornecedor | 300,00 | nenhum vínculo; Dúbio para as duas |
+| Duas autorizações `3x` de 900,00 do mesmo fornecedor | 300,00 | nenhum vínculo; sugestão Parcial para as duas |
+| 900,00, `3x`, e outra autorização de 300,00 em disputa com uma terceira | 300,00 | nenhum vínculo de parcela; o pagamento fica com a disputa |
+| 900,00, `3x`, com uma parcela vinculada na execução | 250,00 do mesmo fornecedor | sugestão Parcial, comparada com o saldo que restou |
 | 900,00, `3x` | 300,00 com data anterior à autorização | vincula como parcela, com `paid_before_authorization` |
 | 900,00, `3x`, cartão 0798 | 300,00 da fatura do cartão 4931 | sugestão, `card_mismatch` |
 

@@ -91,7 +91,7 @@ final class SupplierSimilarity
     {
         $plain = levenshtein($first, $second);
 
-        if ($plain < 2 || $plain * 2 > max(strlen($first), strlen($second))) {
+        if ($plain < 2 || $plain * 2 > max(strlen($first), strlen($second)) || ! $this->hasSwappedNeighbours($first, $second)) {
             return $plain;
         }
 
@@ -117,6 +117,27 @@ final class SupplierSimilarity
         }
 
         return $previous[$secondLength];
+    }
+
+    /**
+     * Whether two neighbouring letters of one name appear in the opposite order in the other.
+     * Without that, no swap can shorten the distance and the plain one is already the answer.
+     */
+    private function hasSwappedNeighbours(string $first, string $second): bool
+    {
+        $pairs = [];
+
+        for ($index = strlen($second) - 2; $index >= 0; $index--) {
+            $pairs[$second[$index + 1].$second[$index]] = true;
+        }
+
+        for ($index = strlen($first) - 2; $index >= 0; $index--) {
+            if ($first[$index] !== $first[$index + 1] && isset($pairs[$first[$index].$first[$index + 1]])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -166,6 +187,7 @@ final class SupplierSimilarity
     private function sameWordMistyped(string $first, string $second): bool
     {
         return min(strlen($first), strlen($second)) >= self::TYPO_TOLERANT_WORD_LENGTH
+            && abs(strlen($first) - strlen($second)) <= 1
             && $this->typingDistance($first, $second) <= 1;
     }
 

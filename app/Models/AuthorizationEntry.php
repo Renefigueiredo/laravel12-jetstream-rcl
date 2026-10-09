@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AuthorizationStatus;
+use App\Services\Reconciliation\Matching\PaymentConditionParser;
 use Database\Factories\AuthorizationEntryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -93,6 +94,30 @@ class AuthorizationEntry extends Model
     public function sourcePayment(): BelongsTo
     {
         return $this->belongsTo(PaymentEntry::class, 'source_payment_entry_id');
+    }
+
+    /**
+     * Instalments foreseen by the payment condition as it was informed, when it is recognised.
+     */
+    public function foreseenInstallments(): ?int
+    {
+        return app(PaymentConditionParser::class)->installments($this->payment_condition);
+    }
+
+    /**
+     * The condition as informed, followed by the instalments it foresees when there is more than one.
+     */
+    public function paymentConditionLabel(): ?string
+    {
+        $installments = $this->foreseenInstallments();
+
+        if (blank($this->payment_condition)) {
+            return null;
+        }
+
+        return $installments !== null && $installments > 1
+            ? __('conciliation.reconciliation.columns.condition_with_installments', ['condition' => $this->payment_condition, 'count' => $installments])
+            : $this->payment_condition;
     }
 
     /**

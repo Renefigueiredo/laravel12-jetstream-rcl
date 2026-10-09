@@ -12,7 +12,7 @@
             __('conciliation.reconciliation.columns.authorized_on') => $authorization->authorized_on->format('d/m/Y'),
             __('conciliation.reconciliation.details.payment_method') => $authorization->payment_method,
             __('conciliation.reconciliation.columns.card') => $authorization->card,
-            __('conciliation.reconciliation.details.payment_condition') => $authorization->payment_condition,
+            __('conciliation.reconciliation.details.payment_condition') => $authorization->paymentConditionLabel(),
             __('conciliation.reconciliation.details.session') => $authorization->session->label(),
             __('conciliation.reconciliation.details.origin') => $authorization->isCreatedInReconciliation()
                 ? __('conciliation.reconciliation.details.created_in_reconciliation')

@@ -2,11 +2,13 @@
 
 namespace App\Services\Reconciliation;
 
+use App\Enums\DifferenceTreatment;
 use App\Enums\ImportFileStatus;
 use App\Enums\SessionStatus;
 use App\Enums\SkipReason;
 use App\Models\AuthorizationEntry;
 use App\Models\PaymentEntry;
+use App\Models\ReconciliationLink;
 use App\Models\ReconciliationPairBlock;
 use App\Models\ReconciliationSession;
 use App\Services\ExcludedCodes\ExcludedCodeSnapshot;
@@ -15,13 +17,17 @@ use App\Services\Reconciliation\Matching\AuthorizationCandidate;
 use App\Services\Reconciliation\Matching\EngineParameters;
 use App\Services\Reconciliation\Matching\Matcher;
 use App\Services\Reconciliation\Matching\PaymentCandidate;
+use App\Services\Reconciliation\Matching\PaymentConditionParser;
 use App\Services\Reconciliation\Matching\SupplierNameNormalizer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
 class CandidateLoader
 {
-    public function __construct(protected SupplierNameNormalizer $normalizer) {}
+    public function __construct(
+        protected SupplierNameNormalizer $normalizer,
+        protected PaymentConditionParser $conditions,
+    ) {}
 
     /**
      * Read what a run compares: the payments of the session, its authorizations and the
@@ -32,10 +38,10 @@ class CandidateLoader
         $skips = [];
 
         return new LoadedCandidates(
-            authorizations: [
+            authorizations: $this->withInstallments([
                 ...$this->sessionAuthorizations($session, $parameters, $skips),
                 ...$this->priorAuthorizations($session, $parameters),
-            ],
+            ]),
             payments: $this->payments($session, $excludedCodes, $skips),
             skips: $skips,
             blockedPairs: $this->blockedPairs(),
@@ -226,7 +232,49 @@ class CandidateLoader
             paysByCard: $parameters->cardMethodMarker !== ''
                 && str_contains(strtoupper(Str::ascii((string) $row->payment_method)), $parameters->cardMethodMarker),
             card: $row->card,
+            installments: $this->conditions->installments($row->payment_condition),
         );
+    }
+
+    /**
+     * Give each authorization the amounts of the payments already linked to it as "still owed":
+     * the next payment of the same amount is taken as one more instalment.
+     *
+     * @param  list<AuthorizationCandidate>  $authorizations
+     * @return list<AuthorizationCandidate>
+     */
+    protected function withInstallments(array $authorizations): array
+    {
+        $amounts = [];
+
+        foreach (array_chunk(array_map(fn (AuthorizationCandidate $authorization): int => $authorization->id, $authorizations), 500) as $ids) {
+            $rows = ReconciliationLink::query()
+                ->join('payment_entries', 'payment_entries.id', '=', 'reconciliation_links.payment_entry_id')
+                ->whereIn('reconciliation_links.authorization_entry_id', $ids)
+                ->where('reconciliation_links.treatment', DifferenceTreatment::StillOwed)
+                ->orderBy('reconciliation_links.id')
+                ->toBase()
+                ->get(['reconciliation_links.authorization_entry_id', 'payment_entries.amount_cents']);
+
+            foreach ($rows as $row) {
+                $amounts[(int) $row->authorization_entry_id][] = (int) $row->amount_cents;
+            }
+        }
+
+        return array_map(fn (AuthorizationCandidate $authorization): AuthorizationCandidate => isset($amounts[$authorization->id])
+            ? new AuthorizationCandidate(
+                id: $authorization->id,
+                supplier: $authorization->supplier,
+                balanceCents: $authorization->balanceCents,
+                authorizedCents: $authorization->authorizedCents,
+                authorizedOn: $authorization->authorizedOn,
+                identityKey: $authorization->identityKey,
+                paysByCard: $authorization->paysByCard,
+                card: $authorization->card,
+                installments: $authorization->installments,
+                installmentAmounts: array_values(array_unique($amounts[$authorization->id])),
+            )
+            : $authorization, $authorizations);
     }
 
     /**

@@ -432,9 +432,43 @@ Resultado em julho/2026, sobre uma cópia do banco: 37 autorizações conciliada
 contra 32 antes desses ajustes; os cinco vínculos novos têm fornecedor com erro de digitação na
 autorização. Nenhum par que conciliava sozinho deixou de conciliar.
 
+## R27. Decisões tomadas depois do MVP (testes manuais de 2026-10-09)
+
+- **Nome na tela**: a "nota" da spec aparece para o usuário como "Confiança". Os documentos e o
+  código continuam usando "nota" (`score`).
+- **Vínculo manual pelos dois lados**: além de "Vincular" na autorização (FR-029), o pagamento sem
+  autorização ganhou "Vincular", que lista as autorizações em aberto, as do mesmo cartão e de
+  valor mais próximo primeiro. As duas ações usam `LinkManually`.
+- **Modal de vínculo**: lista de pagamentos com valor, soma, saldo e diferença sempre visíveis;
+  cabeçalho e botões fixos.
+- **Criar autorização correspondente (FR-041a)**: somente Administrador (gate
+  `create-matching-authorization`), com justificativa obrigatória, gravada no campo de pedido da
+  autorização e na auditoria. O vínculo aparece em Conciliados com a marca "Autorização criada".
+- **Aba Por cartão**: o detalhe do cartão são três tabelas (conciliadas, autorizações sem fatura,
+  linhas sem autorização) com as mesmas ações das outras abas. As consultas ficam em
+  `CardStatement`.
+- **Recusas**: toda ação recusada aparece em um diálogo (`ShowsRefusal`, `<x-refusal-modal>`),
+  não mais na faixa do topo. Sucessos continuam na faixa.
+- **Parcelas (R9)**: o pagamento que serve de parcela a duas autorizações, ou que disputa o lugar
+  de melhor par de outra, não é vinculado; fica como sugestão Parcial. Depois de receber parcelas
+  na execução, a autorização tem os demais pares comparados com o saldo que restou. O vínculo de
+  parcela é gravado como "Ainda falta pagar"; o que quita o saldo é gravado como exato.
+- **Tolerância**: tolerância fixa de até R$ 1.000,00; percentuais de 0 a 100 com duas casas;
+  percentual em branco desliga o percentual e o teto.
+- **Julho/2026 com as regras finais**: nenhum pagamento livre se encaixa como parcela; 6 das 272
+  autorizações têm condição parcelada. O efeito das parcelas aparece a partir de agosto.
+- **Desempenho (SC-002)**: 2.000 autorizações e 8.000 pagamentos conciliados em cerca de 46 s na
+  máquina de desenvolvimento; quase todo o tempo é a comparação de nomes de fornecedores que
+  compartilham uma palavra. A distância com troca de letras vizinhas só é calculada quando há
+  letras trocadas entre os nomes, o que não altera o resultado.
+- **Roteiro manual**: executado pelo responsável no navegador durante a implementação, tela por
+  tela, exceto o passo de acessibilidade; os ajustes pedidos estão nesta seção e nas R22 a R26.
+
 ## Pendências que dependem do responsável
 
 1. **Rodar a suíte em PostgreSQL** antes de produção (R21).
+   Junto com isso, o passo de acessibilidade do roteiro manual (teclado e leitor de tela), que
+   ainda não foi executado.
 2. **Calibrar os limites de nota** com os arquivos reais (R6).
 3. **Empate entre compras idênticas**: duas autorizações iguais e dois pagamentos iguais ficam
    todos como Dúbio, pela regra de empate da spec. Se isso gerar muitos cliques nos dados reais,

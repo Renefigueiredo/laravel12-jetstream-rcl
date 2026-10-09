@@ -120,8 +120,8 @@ class AuthorizationStateCalculator
 | `LinkManually` | `(User, AuthorizationEntry, PaymentEntry, ?DifferenceTreatment, ?JustificationCategory, ?string $justification): ReconciliationLink` |
 | `RemoveLink` | `(User, ReconciliationLink): void` |
 | `CloseAuthorizationWithDiscount` | `(User, AuthorizationEntry, JustificationCategory, string $justification): ReconciliationLink` |
-| `CreateMatchingAuthorization` | `(User, PaymentEntry): ReconciliationLink` |
-| `UpdateReconciliationSettings` | `(User, int $toleranceCents, ?int $toleranceBasisPoints, int $surchargeCapBasisPoints): ReconciliationSettings` |
+| `CreateMatchingAuthorization` | `(User, PaymentEntry, string $justification): ReconciliationLink`; somente Administrador |
+| `UpdateReconciliationSettings` | `(User, int $toleranceCents, ?int $toleranceBasisPoints, ?int $toleranceCapCents, int $surchargeCapBasisPoints): ReconciliationSettings` |
 
 Todas: autorizam, abrem transação, gravam auditoria e lançam `ActionRefusedException` nas recusas.
 

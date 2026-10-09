@@ -8,6 +8,7 @@ use App\Livewire\Reconciliation\Concerns\ShowsEntryDetails;
 use App\Models\PaymentEntry;
 use App\Models\PendingItem;
 use App\Models\ReconciliationSession;
+use App\Services\Reconciliation\EngineParametersFactory;
 use App\Support\Money;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
@@ -176,7 +177,7 @@ class PendingTable extends Component implements HasActions, HasSchemas, HasTable
     protected function items(): Builder
     {
         return PendingItem::query()
-            ->with(['suggestion', 'authorization.state', 'authorization.session', 'authorization.links.payment', 'payment'])
+            ->with(['suggestion.run', 'authorization.state', 'authorization.session', 'authorization.links.payment', 'payment'])
             ->where('reconciliation_session_id', $this->sessionId)
             ->when(
                 $this->classification === 'todos',
@@ -218,6 +219,7 @@ class PendingTable extends Component implements HasActions, HasSchemas, HasTable
             $item->suggestion?->is_tie ? __('conciliation.reconciliation.warnings.tie') : null,
             $item->paid_before_authorization ? __('conciliation.reconciliation.warnings.paid_before_authorization') : null,
             $item->card_mismatch ? __('conciliation.reconciliation.warnings.card_mismatch') : null,
+            $this->isNotTheForeseenInstallment($item) ? __('conciliation.reconciliation.warnings.not_the_installment') : null,
         ]);
 
         return $warnings === [] ? null : implode(' · ', $warnings);
@@ -233,9 +235,34 @@ class PendingTable extends Component implements HasActions, HasSchemas, HasTable
             $item->suggestion?->is_tie ? __('conciliation.reconciliation.warnings.help.tie') : null,
             $item->paid_before_authorization ? __('conciliation.reconciliation.warnings.help.paid_before_authorization') : null,
             $item->card_mismatch ? __('conciliation.reconciliation.warnings.help.card_mismatch') : null,
+            $this->isNotTheForeseenInstallment($item) ? __('conciliation.reconciliation.warnings.help.not_the_installment', [
+                'amount' => Money::format(intdiv($item->authorization->amount_cents, $item->authorization->foreseenInstallments())),
+            ]) : null,
         ]);
 
         return $help === [] ? null : implode(' ', $help);
+    }
+
+    /**
+     * A partial payment for an authorization in instalments whose amount is not the instalment foreseen.
+     */
+    protected function isNotTheForeseenInstallment(PendingItem $item): bool
+    {
+        if ($item->classification !== 'partial' || $item->authorization === null || $item->payment === null) {
+            return false;
+        }
+
+        $installments = $item->authorization->foreseenInstallments();
+
+        if ($installments === null || $installments < 2) {
+            return false;
+        }
+
+        $foreseen = intdiv($item->authorization->amount_cents, $installments);
+        $run = $item->suggestion?->run;
+
+        return $run !== null
+            && abs($item->payment->amount_cents - $foreseen) > app(EngineParametersFactory::class)->fromRun($run)->toleranceFor($foreseen);
     }
 
     protected function authorizationDetails(PendingItem $item): ?string
@@ -251,7 +278,7 @@ class PendingTable extends Component implements HasActions, HasSchemas, HasTable
             $authorization->authorized_on->format('d/m/Y'),
             $authorization->payment_method,
             $authorization->card === null ? null : __('conciliation.reconciliation.columns.card_number', ['card' => $authorization->card]),
-            $authorization->payment_condition,
+            $authorization->paymentConditionLabel(),
             $authorization->reconciliation_session_id === $this->sessionId
                 ? null
                 : __('conciliation.reconciliation.columns.from_session', ['period' => $authorization->session->periodLabel()]),

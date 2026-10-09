@@ -49,6 +49,23 @@ final class Matcher
 
         [$links, $linkedAuthorizations, $linkedPayments] = $this->linkExactPairs($pairs, $authorizationsById, $paymentsById, $parameters);
 
+        [$installments, $remaining] = $this->linkInstallments($pairs, $authorizations, $paymentsById, $linkedAuthorizations, $linkedPayments, $parameters);
+
+        foreach ($installments as $pair) {
+            $links[] = $pair;
+            $linkedPayments[$pair->paymentId] = true;
+        }
+
+        foreach ($remaining as $authorizationId => $balance) {
+            if ($balance === 0) {
+                $linkedAuthorizations[$authorizationId] = true;
+
+                continue;
+            }
+
+            $pairs[$authorizationId] = $this->scoredAgain($pairs[$authorizationId], $balance, $paymentsById, $linkedPayments, $parameters);
+        }
+
         $reportProgress !== null && $reportProgress(70);
 
         $suggestions = $this->suggest($pairs, $authorizations, $paymentsById, $linkedAuthorizations, $linkedPayments, $parameters);
@@ -189,6 +206,166 @@ final class Matcher
         } while ($round !== []);
 
         return [$links, $linkedAuthorizations, $linkedPayments];
+    }
+
+    /**
+     * Link, as instalments, the payments that have the amount of one instalment of an
+     * authorization still open: the authorized amount divided by the instalments foreseen, or
+     * the amount of a payment already linked as "still owed".
+     *
+     * The amount is scored against the instalment, not against the whole balance, and the pair
+     * links only at the automatic threshold. A payment that serves two authorizations, or that
+     * disputes the place of best match of another one, is left to the operator.
+     *
+     * @param  array<int, array<int, MatchedPair>>  $pairs
+     * @param  list<AuthorizationCandidate>  $authorizations
+     * @param  array<int, PaymentCandidate>  $paymentsById
+     * @param  array<int, true>  $linkedAuthorizations
+     * @param  array<int, true>  $linkedPayments
+     * @return array{0: list<MatchedPair>, 1: array<int, int>} The links and what is left of each authorization that got one
+     */
+    private function linkInstallments(array $pairs, array $authorizations, array $paymentsById, array $linkedAuthorizations, array $linkedPayments, EngineParameters $parameters): array
+    {
+        $claims = [];
+        $contenders = [];
+
+        foreach ($authorizations as $authorization) {
+            if (isset($linkedAuthorizations[$authorization->id])) {
+                continue;
+            }
+
+            $references = $this->installmentReferences($authorization);
+
+            foreach ($pairs[$authorization->id] ?? [] as $paymentId => $pair) {
+                if (isset($linkedPayments[$paymentId])) {
+                    continue;
+                }
+
+                if ($this->contends($pair, $parameters)) {
+                    $contenders[$paymentId][$authorization->id] = true;
+                }
+
+                $score = $this->installmentScore($pair, $references, $paymentsById[$paymentId], $parameters);
+
+                if ($score !== null && ! $pair->cardMismatch) {
+                    $claims[$paymentId][$authorization->id] = $score;
+                }
+            }
+        }
+
+        $links = [];
+        $remaining = [];
+
+        foreach ($authorizations as $authorization) {
+            $balance = $authorization->balanceCents;
+            $candidates = [];
+
+            foreach ($claims as $paymentId => $claimants) {
+                $alone = count($claimants) === 1 && array_diff_key($contenders[$paymentId] ?? [], $claimants) === [];
+
+                if ($alone && isset($claimants[$authorization->id])) {
+                    $candidates[] = $paymentsById[$paymentId];
+                }
+            }
+
+            usort($candidates, fn (PaymentCandidate $a, PaymentCandidate $b): int => [$a->paidOn, $a->id] <=> [$b->paidOn, $b->id]);
+
+            foreach ($candidates as $payment) {
+                if ($balance <= 0 || $payment->amountCents - $balance > $parameters->toleranceFor($balance)) {
+                    continue;
+                }
+
+                $pair = $pairs[$authorization->id][$payment->id];
+
+                $links[] = new MatchedPair(
+                    authorizationId: $authorization->id,
+                    paymentId: $payment->id,
+                    score: $claims[$payment->id][$authorization->id],
+                    classification: MatchClassification::Installment,
+                    paidBeforeAuthorization: $pair->paidBeforeAuthorization,
+                    cardMismatch: false,
+                );
+
+                $balance = abs($payment->amountCents - $balance) <= $parameters->toleranceFor($balance)
+                    ? 0
+                    : max(0, $balance - $payment->amountCents);
+
+                $remaining[$authorization->id] = $balance;
+            }
+        }
+
+        return [$links, $remaining];
+    }
+
+    /**
+     * The pairs of an authorization that received instalments, compared with what is left of it.
+     *
+     * @param  array<int, MatchedPair>  $pairs
+     * @param  array<int, PaymentCandidate>  $paymentsById
+     * @param  array<int, true>  $linkedPayments
+     * @return array<int, MatchedPair>
+     */
+    private function scoredAgain(array $pairs, int $balanceCents, array $paymentsById, array $linkedPayments, EngineParameters $parameters): array
+    {
+        $scored = [];
+
+        foreach ($pairs as $paymentId => $pair) {
+            if (isset($linkedPayments[$paymentId])) {
+                continue;
+            }
+
+            $score = $this->scorer->score($pair->score->supplierScore, $balanceCents, $paymentsById[$paymentId]->amountCents, $parameters);
+
+            if ($score->classification === null) {
+                continue;
+            }
+
+            $scored[$paymentId] = new MatchedPair(
+                authorizationId: $pair->authorizationId,
+                paymentId: $paymentId,
+                score: $score,
+                classification: $score->classification,
+                paidBeforeAuthorization: $pair->paidBeforeAuthorization,
+                cardMismatch: $pair->cardMismatch,
+            );
+        }
+
+        return $scored;
+    }
+
+    /**
+     * @return list<int> Amounts an instalment of the authorization may have
+     */
+    private function installmentReferences(AuthorizationCandidate $authorization): array
+    {
+        $references = $authorization->installmentAmounts;
+
+        if ($authorization->installments !== null && $authorization->installments > 1) {
+            $references[] = intdiv($authorization->authorizedCents, $authorization->installments);
+        }
+
+        return array_values(array_unique(array_filter($references, fn (int $cents): bool => $cents > 0)));
+    }
+
+    /**
+     * The score of the pair as an instalment, when it reaches the automatic threshold.
+     *
+     * @param  list<int>  $references
+     */
+    private function installmentScore(MatchedPair $pair, array $references, PaymentCandidate $payment, EngineParameters $parameters): ?PairScore
+    {
+        $best = null;
+
+        foreach ($references as $reference) {
+            $score = $this->scorer->score($pair->score->supplierScore, $reference, $payment->amountCents, $parameters);
+
+            if ($score->classification === MatchClassification::Automatic
+                && ($best === null || abs($score->differenceCents) < abs($best->differenceCents))) {
+                $best = $score;
+            }
+        }
+
+        return $best;
     }
 
     /**

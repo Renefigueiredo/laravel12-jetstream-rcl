@@ -266,6 +266,7 @@ return [
             'difference' => 'Diferença',
             'card' => 'Cartão',
             'card_number' => 'Cartão :card',
+            'condition_with_installments' => ':condition (:count parcelas previstas)',
             'unit' => 'Unidade',
             'operation' => 'Código de operação',
             'species' => 'Espécie',
@@ -356,10 +357,12 @@ return [
             'tie' => 'Empate',
             'paid_before_authorization' => 'Pago antes da autorização',
             'card_mismatch' => 'Cartão diferente',
+            'not_the_installment' => 'Fora da parcela prevista',
             'help' => [
                 'tie' => 'Empate: outra autorização ou outro pagamento igual disputa este par.',
                 'paid_before_authorization' => 'A data do pagamento é anterior à data da autorização.',
                 'card_mismatch' => 'A autorização e o pagamento são de cartões diferentes.',
+                'not_the_installment' => 'O valor pago não corresponde à parcela prevista de :amount.',
             ],
         ],
         'link_origin' => [
@@ -477,6 +480,34 @@ return [
             'justification_too_long' => 'A justificativa pode ter até 500 caracteres.',
             'surcharge_above_cap' => 'O valor excedido passa do teto de :cap% para acréscimo aceito. Registre como "Pagamento a maior".',
             'engine_busy' => 'Outra conciliação está em execução e não terminou a tempo. Tente executar novamente em alguns minutos.',
+        ],
+    ],
+
+    'settings' => [
+        'title' => 'Tolerância da conciliação',
+        'nav' => 'Tolerância',
+        'intro' => 'Dois valores são considerados iguais quando a diferença, para mais ou para menos, cabe no valor fixo ou no percentual (limitado ao teto). A alteração vale para as próximas execuções; o que já foi processado mantém os valores com que foi executado.',
+        'save' => 'Salvar',
+        'saved' => 'Tolerância salva. Ela vale para as próximas execuções.',
+        'last_change' => 'Última alteração: :name, em :when.',
+        'never_changed' => 'Valores iniciais do sistema.',
+        'fields' => [
+            'tolerance_amount' => 'Tolerância em valor (R$)',
+            'tolerance_percent' => 'Tolerância em percentual (%)',
+            'tolerance_cap' => 'Teto da tolerância percentual (R$)',
+            'surcharge_cap' => 'Teto do acréscimo aceito (%)',
+        ],
+        'help' => [
+            'tolerance_amount' => 'Exemplo: 0,50. Use 0 para valer só o percentual.',
+            'tolerance_percent' => 'Exemplo: 1. Deixe em branco para valer só o valor fixo.',
+            'tolerance_cap' => 'Exemplo: 200,00. Deixe em branco para não limitar o percentual.',
+            'surcharge_cap' => 'Quanto um pagamento pode passar do autorizado e ainda ser aceito como acréscimo. Exemplo: 10.',
+        ],
+        'errors' => [
+            'tolerance_amount' => 'Informe a tolerância em reais, de 0,00 a 1.000,00.',
+            'tolerance_percent' => 'Informe o percentual de 0 a 100, com até duas casas decimais.',
+            'tolerance_cap' => 'Informe o teto em reais, ou deixe em branco.',
+            'surcharge_cap' => 'Informe o teto do acréscimo de 0 a 100, com até duas casas decimais.',
         ],
     ],
 

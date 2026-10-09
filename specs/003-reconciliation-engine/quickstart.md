@@ -80,14 +80,16 @@ montada (67 códigos).
 9. **Vincular manualmente**: em uma autorização Sem pagamento, escolher um pagamento da fila.
 10. **Desvincular**: em Conciliados, desvincular um par automático; os dois voltam às pendências e
     o par não é mais sugerido.
-11. **Fila de investigação**: filtrar por unidade e por código; "Criar autorização
-    correspondente" em um pagamento; desvincular e ver a autorização criada sumir.
+11. **Fila de investigação**: filtrar por unidade e por código; "Vincular" um pagamento a uma
+    autorização em aberto; como Administrador, "Criar autorização" com justificativa; conferir a
+    marca "Autorização criada" em Conciliados; desvincular e ver a autorização criada sumir. Como
+    Operador, conferir que "Criar autorização" não aparece.
 12. **Pagos antes da autorização**: abrir a aba e conferir as duas datas.
     Na aba **Por cartão**, conferir os cinco cartões de julho (0798, 4931, 5352, 7607 e 7222) e
     abrir a conferência do 0798: linhas da fatura, autorizações sem fatura e linhas sem
     autorização. Filtrar as Pendências por cartão.
-13. **Tolerância**: como Administrador, mudar para R$ 1,00; a sessão já processada continua
-    mostrando R$ 0,50.
+13. **Tolerância**: como Administrador, abrir "Tolerância" no menu e mudar para R$ 1,00; a sessão
+    já processada continua mostrando R$ 0,50. Voltar ao valor original.
 14. **Reabrir**: tentar reabrir com decisões manuais (recusado, com a quantidade); desfazer as
     decisões, reabrir e executar de novo; conferir que o par rejeitado não voltou.
 15. **Sessão seguinte**: criar a sessão de agosto, carregar os arquivos e executar; conferir que

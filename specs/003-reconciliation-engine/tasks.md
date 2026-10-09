@@ -251,16 +251,16 @@ só a primeira exige confirmação.
 
 ### Tests for User Story 8 ⚠️
 
-- [ ] T073 [P] [US8] Escrever `tests/Unit/Reconciliation/PaymentConditionParserTest.php` com a tabela "Condição de pagamento → parcelas previstas"
-- [ ] T074 [P] [US8] Escrever `tests/Unit/Reconciliation/MatcherInstallmentsTest.php` com a tabela "Vínculo automático de parcela", incluindo a tabela de nota da parcela (valor contra a parcela de referência; fornecedor abaixo do limite não vincula), divisão com centavo de resto, duas parcelas na mesma sessão em ordem de data, parcela que não cabe no saldo, duas autorizações servidas pelo mesmo pagamento, data anterior e cartão diferente
-- [ ] T075 [P] [US8] Escrever `tests/Feature/Reconciliation/InstallmentsAcrossSessionsTest.php`: os cenários 1 a 12 da história em três sessões; autorização parcelada com vínculo e saldo é lida fora da janela; primeira parcela de autorização "A vista" exige confirmação e as seguintes entram sozinhas; parcela desvinculada não volta sozinha; nenhum vínculo de parcela passa do valor autorizado (SC-011, SC-012)
+- [X] T073 [P] [US8] Escrever `tests/Unit/Reconciliation/PaymentConditionParserTest.php` com a tabela "Condição de pagamento → parcelas previstas"
+- [X] T074 [P] [US8] Escrever `tests/Unit/Reconciliation/MatcherInstallmentsTest.php` com a tabela "Vínculo automático de parcela", incluindo a tabela de nota da parcela (valor contra a parcela de referência; fornecedor abaixo do limite não vincula), divisão com centavo de resto, duas parcelas na mesma sessão em ordem de data, parcela que não cabe no saldo, duas autorizações servidas pelo mesmo pagamento, data anterior e cartão diferente
+- [X] T075 [P] [US8] Escrever `tests/Feature/Reconciliation/InstallmentsAcrossSessionsTest.php`: os cenários 1 a 12 da história em três sessões; autorização parcelada com vínculo e saldo é lida fora da janela; primeira parcela de autorização "A vista" exige confirmação e as seguintes entram sozinhas; parcela desvinculada não volta sozinha; nenhum vínculo de parcela passa do valor autorizado (SC-011, SC-012)
 
 ### Implementation for User Story 8
 
-- [ ] T076 [P] [US8] Criar `app/Services/Reconciliation/Matching/PaymentConditionParser.php`, até T073 passar
-- [ ] T077 [US8] Acrescentar a etapa de parcelas a `app/Services/Reconciliation/Matching/Matcher.php` (research R9), com o valor de referência pela condição ou por pagamento já vinculado como "Ainda falta pagar", a nota calculada contra esse valor e o vínculo só com nota igual ou superior ao limite automático (FR-044a), até T074 passar
-- [ ] T078 [US8] Em `app/Services/Reconciliation/CandidateLoader.php`, ler as autorizações com vínculo e saldo fora da janela e os valores de parcelas já vinculadas; em `app/Services/Reconciliation/MatchResultWriter.php`, gravar o vínculo de parcela com `is_installment`, até T075 passar
-- [ ] T079 [US8] Mostrar em `app/Livewire/Reconciliation/PendingTable.php` e `app/Livewire/Reconciliation/LinksTable.php` a condição como informada, as parcelas previstas, os pagamentos vinculados, o valor pago e o saldo, e o aviso quando o valor não corresponde à parcela prevista (FR-048)
+- [X] T076 [P] [US8] Criar `app/Services/Reconciliation/Matching/PaymentConditionParser.php`, até T073 passar
+- [X] T077 [US8] Acrescentar a etapa de parcelas a `app/Services/Reconciliation/Matching/Matcher.php` (research R9), com o valor de referência pela condição ou por pagamento já vinculado como "Ainda falta pagar", a nota calculada contra esse valor e o vínculo só com nota igual ou superior ao limite automático (FR-044a), até T074 passar
+- [X] T078 [US8] Em `app/Services/Reconciliation/CandidateLoader.php`, ler as autorizações com vínculo e saldo fora da janela e os valores de parcelas já vinculadas; em `app/Services/Reconciliation/MatchResultWriter.php`, gravar o vínculo de parcela com `is_installment`, até T075 passar
+- [X] T079 [US8] Mostrar em `app/Livewire/Reconciliation/PendingTable.php` e `app/Livewire/Reconciliation/LinksTable.php` a condição como informada, as parcelas previstas, os pagamentos vinculados, o valor pago e o saldo, e o aviso quando o valor não corresponde à parcela prevista (FR-048)
 
 **Checkpoint**: parcelamento reconhecido sem clique, ou com um só.
 
@@ -297,12 +297,12 @@ já processada continua mostrando o valor antigo.
 
 ### Tests for User Story 7 ⚠️
 
-- [ ] T083 [US7] Escrever `tests/Feature/Reconciliation/ReconciliationSettingsTest.php`: os cenários 1 a 6 da história; Operador sem a permissão recebe 403 e não vê o item de menu; Operador com `ConfigureTolerance` acessa; valor negativo, percentual acima de 100 e teto acima de 100 são recusados; a alteração audita os valores anterior e novo; a execução seguinte usa o valor novo e a já processada mantém o seu (SC-009); tolerância só em valor, só em percentual e nos dois
+- [X] T083 [US7] Escrever `tests/Feature/Reconciliation/ReconciliationSettingsTest.php`: os cenários 1 a 6 da história; Operador sem a permissão recebe 403 e não vê o item de menu; Operador com `ConfigureTolerance` acessa; valor negativo, percentual acima de 100 e teto acima de 100 são recusados; a alteração audita os valores anterior e novo; a execução seguinte usa o valor novo e a já processada mantém o seu (SC-009); tolerância só em valor, só em percentual e nos dois
 
 ### Implementation for User Story 7
 
-- [ ] T084 [US7] Criar `app/Actions/Conciliation/UpdateReconciliationSettings.php`: autoriza o gate, valida os limites, grava com `updated_by` e audita `ReconciliationSettingsChanged`
-- [ ] T085 [US7] Criar `app/Livewire/Reconciliation/Settings.php`, o Form Object `app/Livewire/Forms/ReconciliationSettingsForm.php` (reais com vírgula convertidos para centavos; percentuais com até duas casas convertidos para pontos-base) e a view; registrar a rota `reconciliation.settings` com `->can('configure-tolerance')` em `routes/web.php`; acrescentar o item "Tolerância" a `resources/views/navigation-menu.blade.php` sob o gate, até T083 passar
+- [X] T084 [US7] Criar `app/Actions/Conciliation/UpdateReconciliationSettings.php`: autoriza o gate, valida os limites, grava com `updated_by` e audita `ReconciliationSettingsChanged`
+- [X] T085 [US7] Criar `app/Livewire/Reconciliation/Settings.php`, o Form Object `app/Livewire/Forms/ReconciliationSettingsForm.php` (reais com vírgula convertidos para centavos; percentuais com até duas casas convertidos para pontos-base) e a view; registrar a rota `reconciliation.settings` com `->can('configure-tolerance')` em `routes/web.php`; acrescentar o item "Tolerância" a `resources/views/navigation-menu.blade.php` sob o gate, até T083 passar
 
 **Checkpoint**: todas as histórias funcionam de forma independente.
 
@@ -312,12 +312,12 @@ já processada continua mostrando o valor antigo.
 
 **Purpose**: desempenho, calibração com dados reais, conferência final e documentação.
 
-- [ ] T086 [P] Escrever `tests/Feature/Reconciliation/ReconciliationPerformanceTest.php`: sessão com 10.000 lançamentos (2.000 autorizações e 8.000 pagamentos, com fornecedores variados) conciliada em menos de 120 s (SC-002), e ajustar o `Matcher` se não passar
-- [ ] T087 Executar a conciliação da sessão de julho/2026 com os arquivos reais já importados no banco local; conferir uma amostra dos vínculos automáticos e dos Dúbios; ajustar, se preciso, os limites em `config/conciliation.php` e as regras de `SupplierNameNormalizer`; registrar o percentual automático e os ajustes em `specs/003-reconciliation-engine/research.md`, sem copiar dados pessoais
-- [ ] T088 Atualizar `specs/001-session-file-import/contracts/application-interfaces.md` com a chamada de `discardResult()` na reabertura
-- [ ] T089 Rodar a suíte inteira (`php artisan test --compact`) e `vendor/bin/pint --dirty --format agent`, e corrigir o que falhar
-- [ ] T090 Executar o roteiro manual de `specs/003-reconciliation-engine/quickstart.md` no navegador, com `queue:work` e `npm run build`, incluindo o passo de acessibilidade (Princípio II)
-- [ ] T091 Registrar em `specs/003-reconciliation-engine/research.md` as decisões tomadas durante a implementação e o resultado do roteiro manual
+- [X] T086 [P] Escrever `tests/Feature/Reconciliation/ReconciliationPerformanceTest.php`: sessão com 10.000 lançamentos (2.000 autorizações e 8.000 pagamentos, com fornecedores variados) conciliada em menos de 120 s (SC-002), e ajustar o `Matcher` se não passar
+- [X] T087 Executar a conciliação da sessão de julho/2026 com os arquivos reais já importados no banco local; conferir uma amostra dos vínculos automáticos e dos Dúbios; ajustar, se preciso, os limites em `config/conciliation.php` e as regras de `SupplierNameNormalizer`; registrar o percentual automático e os ajustes em `specs/003-reconciliation-engine/research.md`, sem copiar dados pessoais
+- [X] T088 Atualizar `specs/001-session-file-import/contracts/application-interfaces.md` com a chamada de `discardResult()` na reabertura
+- [X] T089 Rodar a suíte inteira (`php artisan test --compact`) e `vendor/bin/pint --dirty --format agent`, e corrigir o que falhar
+- [X] T090 Executar o roteiro manual de `specs/003-reconciliation-engine/quickstart.md` no navegador, com `queue:work` e `npm run build`, incluindo o passo de acessibilidade (Princípio II)
+- [X] T091 Registrar em `specs/003-reconciliation-engine/research.md` as decisões tomadas durante a implementação e o resultado do roteiro manual
 
 ---
 

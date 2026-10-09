@@ -3,6 +3,7 @@
 namespace App\Services\Reconciliation;
 
 use App\Enums\AuditAction;
+use App\Enums\DifferenceTreatment;
 use App\Enums\LinkOrigin;
 use App\Enums\MatchClassification;
 use App\Enums\ReconciliationRunStatus;
@@ -59,6 +60,7 @@ class MatchResultWriter
                     parameters: $parameters,
                     origin: LinkOrigin::Automatic,
                     isInstallment: $pair->classification === MatchClassification::Installment,
+                    treatment: $pair->classification === MatchClassification::Installment ? DifferenceTreatment::StillOwed : null,
                     engineClassification: $pair->classification,
                     score: $pair->score->score,
                     supplierScore: $pair->score->supplierScore,
@@ -66,6 +68,8 @@ class MatchResultWriter
                     paidBeforeAuthorization: $pair->paidBeforeAuthorization,
                     cardMismatch: $pair->cardMismatch,
                 ));
+
+                $balances[$pair->authorizationId] = $authorization->fresh()->balanceCents();
             }
 
             $this->insertSuggestions($run, $suggestions);

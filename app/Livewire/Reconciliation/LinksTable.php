@@ -113,6 +113,7 @@ class LinksTable extends Component implements HasActions, HasSchemas, HasTable
                         Str::limit($record->authorization->request, 70),
                         $record->authorization->authorized_on->format('d/m/Y'),
                         $record->authorization->payment_method,
+                        $record->authorization->paymentConditionLabel(),
                         $record->authorization->card === null ? null : __('conciliation.reconciliation.columns.card_number', ['card' => $record->authorization->card]),
                         $record->authorization->isCreatedInReconciliation() ? __('conciliation.reconciliation.details.created_in_reconciliation') : null,
                         $record->authorization->reconciliation_session_id === $this->sessionId

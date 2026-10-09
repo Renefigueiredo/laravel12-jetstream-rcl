@@ -60,13 +60,15 @@ interface ReconciliationEngine
     /** @param  callable(int $percent): void  $reportProgress */
     public function run(ReconciliationSession $session, callable $reportProgress): void;
 
-    /** Apaga o resultado anterior da sessão. Chamado antes de `run` e em caso de falha. */
+    /** Apaga o resultado anterior da sessão. Chamado antes de `run`, em caso de falha e na reabertura. */
     public function discardResult(ReconciliationSession $session): void;
 }
 ```
 
 - `run` lê os lançamentos ativos da sessão e não altera sessão, arquivos nem lançamentos.
 - Se `run` lança exceção, o job chama `discardResult` e devolve a sessão a `Open`.
+- `ReopenSession` chama `discardResult` dentro da transação da reabertura, depois de conferir que
+  não há decisões manuais nem vínculos com outras sessões (Módulo 2).
 - Sem implementação registrada, `conciliation.engine_enabled` fica `false` e a execução não é
   oferecida.
 
