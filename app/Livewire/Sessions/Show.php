@@ -12,6 +12,7 @@ use App\Actions\Conciliation\SubmitSpreadsheet;
 use App\Enums\ImportAttemptStatus;
 use App\Enums\ImportSlot;
 use App\Enums\SessionStatus;
+use App\Livewire\Concerns\ShowsRefusal;
 use App\Models\ImportAttempt;
 use App\Models\ReconciliationSession;
 use Illuminate\Contracts\View\View;
@@ -23,6 +24,7 @@ use Livewire\WithFileUploads;
 
 class Show extends Component
 {
+    use ShowsRefusal;
     use WithFileUploads;
 
     #[Locked]
@@ -47,10 +49,6 @@ class Show extends Component
     public bool $confirmingReopen = false;
 
     public bool $confirmingDeletion = false;
-
-    public bool $showingRefusal = false;
-
-    public string $refusalMessage = '';
 
     public function mount(ReconciliationSession $session, CancelImportAttempt $cancelImportAttempt): void
     {
@@ -246,12 +244,6 @@ class Show extends Component
         }
 
         $this->refreshState();
-    }
-
-    protected function showRefusal(string $message): void
-    {
-        $this->refusalMessage = $message;
-        $this->showingRefusal = true;
     }
 
     protected function attemptOfSession(int $attemptId): ?ImportAttempt

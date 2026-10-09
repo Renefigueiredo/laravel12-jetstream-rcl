@@ -12,6 +12,7 @@ use App\Enums\DifferenceTreatment;
 use App\Enums\DifferenceType;
 use App\Enums\JustificationCategory;
 use App\Enums\PendingItemKind;
+use App\Livewire\Concerns\ShowsRefusal;
 use App\Models\AuthorizationEntry;
 use App\Models\PaymentEntry;
 use App\Models\PendingItem;
@@ -38,6 +39,8 @@ use Illuminate\Support\Facades\Gate;
  */
 trait DecidesPendingItems
 {
+    use ShowsRefusal;
+
     protected function confirmAction(): Action
     {
         return Action::make('confirm')
@@ -256,7 +259,7 @@ trait DecidesPendingItems
         try {
             $decision();
         } catch (ActionRefusedException $exception) {
-            $this->dispatch('banner-message', style: 'danger', message: $exception->getMessage());
+            $this->showRefusal($exception->getMessage());
             $this->dispatch('reconciliation-changed');
 
             return;

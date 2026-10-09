@@ -96,7 +96,8 @@ class DecisionScreenTest extends TestCase
         Livewire::actingAs($this->operator())
             ->test(PendingTable::class, ['sessionId' => $session->id])
             ->callTableAction('confirm', $item, data: ['treatment' => 'accepted_surcharge', 'category' => 'freight', 'justification' => 'Frete'])
-            ->assertDispatched('banner-message', style: 'danger', message: __('conciliation.reconciliation.errors.surcharge_above_cap', ['cap' => '10']))
+            ->assertSet('showingRefusal', true)
+            ->assertSee(__('conciliation.reconciliation.errors.surcharge_above_cap', ['cap' => '10']))
             ->callTableAction('confirm', $item, data: ['treatment' => 'overpayment'])
             ->assertDispatched('banner-message', style: 'success', message: __('conciliation.reconciliation.actions.confirmed'));
 
@@ -232,7 +233,8 @@ class DecisionScreenTest extends TestCase
             ->assertCanSeeTableRecords([$payment->link])
             ->assertTableActionHidden('unlink', $payment->link)
             ->call('unlink', $payment->link->id)
-            ->assertDispatched('banner-message', style: 'danger', message: __('conciliation.reconciliation.errors.link_already_removed'));
+            ->assertSet('showingRefusal', true)
+            ->assertSee(__('conciliation.reconciliation.errors.link_already_removed'));
 
         $this->assertNotNull($payment->refresh()->link);
     }

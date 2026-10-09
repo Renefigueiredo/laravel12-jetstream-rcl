@@ -8,6 +8,7 @@ use App\Actions\Conciliation\CreateSession;
 use App\Actions\Conciliation\DeleteSession;
 use App\Enums\ImportSlot;
 use App\Enums\SessionStatus;
+use App\Livewire\Concerns\ShowsRefusal;
 use App\Models\ImportFile;
 use App\Models\ReconciliationSession;
 use Filament\Actions\Action;
@@ -30,6 +31,7 @@ class Index extends Component implements HasActions, HasSchemas, HasTable
     use InteractsWithActions;
     use InteractsWithSchemas;
     use InteractsWithTable;
+    use ShowsRefusal;
 
     /**
      * @var string|null
@@ -145,7 +147,7 @@ class Index extends Component implements HasActions, HasSchemas, HasTable
         $session = ReconciliationSession::query()->find($sessionId);
 
         if ($session === null) {
-            $this->dispatch('banner-message', style: 'danger', message: __('conciliation.sessions.not_found'));
+            $this->showRefusal(__('conciliation.sessions.not_found'));
 
             return;
         }
@@ -153,7 +155,7 @@ class Index extends Component implements HasActions, HasSchemas, HasTable
         try {
             ($deleteSession ?? app(DeleteSession::class))->handle(auth()->user(), $session);
         } catch (ActionRefusedException $exception) {
-            $this->dispatch('banner-message', style: 'danger', message: $exception->getMessage());
+            $this->showRefusal($exception->getMessage());
 
             return;
         }

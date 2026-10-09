@@ -4,4 +4,8 @@
     </div>
 
     <x-filament-actions::modals />
+
+    @isset($refusalMessage)
+        <x-refusal-modal :message="$refusalMessage" />
+    @endisset
 </div>

@@ -6,6 +6,7 @@ use App\Actions\Conciliation\ActionRefusedException;
 use App\Actions\Conciliation\RemoveLink;
 use App\Enums\DifferenceTreatment;
 use App\Enums\LinkOrigin;
+use App\Livewire\Concerns\ShowsRefusal;
 use App\Livewire\Reconciliation\Concerns\ShowsEntryDetails;
 use App\Models\ReconciliationLink;
 use App\Models\ReconciliationSession;
@@ -34,6 +35,7 @@ class LinksTable extends Component implements HasActions, HasSchemas, HasTable
     use InteractsWithSchemas;
     use InteractsWithTable;
     use ShowsEntryDetails;
+    use ShowsRefusal;
 
     #[Locked]
     public int $sessionId;
@@ -243,7 +245,7 @@ class LinksTable extends Component implements HasActions, HasSchemas, HasTable
 
             app(RemoveLink::class)->handle(auth()->user(), $link);
         } catch (ActionRefusedException $exception) {
-            $this->dispatch('banner-message', style: 'danger', message: $exception->getMessage());
+            $this->showRefusal($exception->getMessage());
 
             return;
         }

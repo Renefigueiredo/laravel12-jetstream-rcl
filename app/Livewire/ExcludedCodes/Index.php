@@ -6,6 +6,7 @@ use App\Actions\Conciliation\ActionRefusedException;
 use App\Actions\Conciliation\AddExcludedCode;
 use App\Actions\Conciliation\RemoveExcludedCode;
 use App\Actions\Conciliation\SubmitExcludedCodeImport;
+use App\Livewire\Concerns\ShowsRefusal;
 use App\Livewire\Forms\ExcludedCodeForm;
 use App\Models\ExcludedCodeImport;
 use App\Models\ExcludedOperationCode;
@@ -32,6 +33,7 @@ class Index extends Component implements HasActions, HasSchemas, HasTable
     use InteractsWithActions;
     use InteractsWithSchemas;
     use InteractsWithTable;
+    use ShowsRefusal;
     use WithFileUploads;
 
     /**
@@ -214,7 +216,7 @@ class Index extends Component implements HasActions, HasSchemas, HasTable
         try {
             $code = ($removeExcludedCode ?? app(RemoveExcludedCode::class))->handle(auth()->user(), $excludedCodeId);
         } catch (ActionRefusedException $exception) {
-            $this->dispatch('banner-message', style: 'danger', message: $exception->getMessage());
+            $this->showRefusal($exception->getMessage());
 
             return;
         }
