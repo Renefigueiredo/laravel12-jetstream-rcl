@@ -129,6 +129,23 @@
                     <p id="excluded-code-help" class="text-sm text-gray-600">{{ __('conciliation.excluded_codes.code_help') }}</p>
                     <x-input-error for="form.code" />
 
+                    @if ($this->codeUsage)
+                        <div role="status" class="flex flex-col gap-2 rounded-md border border-gray-300 bg-gray-50 p-3 text-sm text-gray-900">
+                            <p>
+                                <span class="font-semibold">{{ __('conciliation.excluded_codes.erp.heading') }}</span>
+                                {{ $this->codeUsage['name'] ?? __('conciliation.excluded_codes.erp.unnamed') }}
+                            </p>
+                            <p>{{ trans_choice('conciliation.excluded_codes.erp.payments', $this->codeUsage['payments'], ['count' => $this->codeUsage['payments']]) }}</p>
+
+                            @if (filled($this->codeUsage['name']))
+                                <button type="button" wire:click="useErpNameAsDescription"
+                                    class="self-start underline text-indigo-800 focus:outline-2 focus:outline-offset-2 focus:outline-indigo-500 rounded-md">
+                                    {{ __('conciliation.excluded_codes.erp.use_as_description') }}
+                                </button>
+                            @endif
+                        </div>
+                    @endif
+
                     @if ($this->codeUsageWarning)
                         <p role="status" class="rounded-md border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
                             {{ $this->codeUsageWarning }}
@@ -160,4 +177,6 @@
     </x-dialog-modal>
 
     <x-filament-actions::modals />
+
+    <x-refusal-modal :message="$refusalMessage" />
 </div>

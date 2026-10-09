@@ -31,6 +31,12 @@
                             {{ __('conciliation.excluded_codes.nav') }}
                         </x-nav-link>
                     @endcan
+
+                    @can('configure-tolerance')
+                        <x-nav-link href="{{ route('reconciliation.settings') }}" :active="request()->routeIs('reconciliation.settings')">
+                            {{ __('conciliation.settings.nav') }}
+                        </x-nav-link>
+                    @endcan
                 </div>
             </div>
 
@@ -172,6 +178,12 @@
             @can('manage-excluded-codes')
                 <x-responsive-nav-link href="{{ route('excluded-codes.index') }}" :active="request()->routeIs('excluded-codes.index')">
                     {{ __('conciliation.excluded_codes.nav') }}
+                </x-responsive-nav-link>
+            @endcan
+
+            @can('configure-tolerance')
+                <x-responsive-nav-link href="{{ route('reconciliation.settings') }}" :active="request()->routeIs('reconciliation.settings')">
+                    {{ __('conciliation.settings.nav') }}
                 </x-responsive-nav-link>
             @endcan
         </div>

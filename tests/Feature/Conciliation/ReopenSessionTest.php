@@ -16,7 +16,7 @@ use App\Models\AuditLog;
 use App\Models\PaymentEntry;
 use App\Models\ReconciliationSession;
 use App\Models\User;
-use App\Services\Import\NullReconciliationResultInspector;
+use App\Services\Reconciliation\ReconciliationDecisionInspector;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -45,7 +45,7 @@ class ReopenSessionTest extends TestCase
 
     public function test_default_inspector_reports_no_blocking_decision(): void
     {
-        $this->assertInstanceOf(NullReconciliationResultInspector::class, app(ReconciliationResultInspector::class));
+        $this->assertInstanceOf(ReconciliationDecisionInspector::class, app(ReconciliationResultInspector::class));
         $this->assertSame(0, app(ReconciliationResultInspector::class)->blockingDecisionCount(ReconciliationSession::factory()->create()));
     }
 
@@ -203,7 +203,10 @@ class ReopenSessionTest extends TestCase
         Livewire::actingAs($session->creator)
             ->test(Show::class, ['session' => $session])
             ->call('reopen')
-            ->assertDispatched('banner-message', style: 'danger', message: trans_choice('conciliation.sessions.reopen.blocked', 1, ['count' => 1]))
+            ->assertSet('showingRefusal', true)
+            ->assertSee(__('conciliation.sessions.refused_heading'))
+            ->assertSee(trans_choice('conciliation.sessions.reopen.blocked', 1, ['count' => 1]))
+            ->assertNotDispatched('banner-message')
             ->assertSee(__('conciliation.sessions.status.processed'));
     }
 }

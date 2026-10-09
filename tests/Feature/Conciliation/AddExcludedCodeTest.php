@@ -222,6 +222,50 @@ class AddExcludedCodeTest extends TestCase
         }
     }
 
+    public function test_the_name_the_erp_gives_the_code_is_shown_while_typing(): void
+    {
+        PaymentEntry::factory()->count(3)->create(['operation_code' => '11052094', 'operation_name' => 'MATERIAL DE CONSTRUÇÃO E MANUTENÇÃO']);
+        PaymentEntry::factory()->create(['operation_code' => '11052094', 'operation_name' => 'MATERIAL DE CONSTRUCAO']);
+        PaymentEntry::factory()->create(['operation_code' => '11051039', 'operation_name' => 'PRODUÇÃO MÉDICA']);
+
+        Livewire::actingAs(User::factory()->administrador()->create())
+            ->test(Index::class)
+            ->call('openAddModal')
+            ->assertSet('codeUsage', null)
+            ->assertDontSee(__('conciliation.excluded_codes.erp.heading'))
+            ->set('form.code', ' 11052094 ')
+            ->set('form.description', 'Produção Médica')
+            ->assertSet('codeUsage', ['name' => 'MATERIAL DE CONSTRUÇÃO E MANUTENÇÃO', 'payments' => 4])
+            ->assertSee(__('conciliation.excluded_codes.erp.heading'))
+            ->assertSee('MATERIAL DE CONSTRUÇÃO E MANUTENÇÃO')
+            ->assertSee(trans_choice('conciliation.excluded_codes.erp.payments', 4, ['count' => 4]))
+            ->assertSet('codeUsageWarning', null)
+            ->call('useErpNameAsDescription')
+            ->assertSet('form.description', 'MATERIAL DE CONSTRUÇÃO E MANUTENÇÃO')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame('MATERIAL DE CONSTRUÇÃO E MANUTENÇÃO', ExcludedOperationCode::query()->sole()->description);
+    }
+
+    public function test_no_erp_name_for_codes_no_payment_carries_or_that_are_invalid(): void
+    {
+        PaymentEntry::factory()->create(['operation_code' => '11052094', 'operation_name' => null]);
+
+        $screen = Livewire::actingAs(User::factory()->administrador()->create())->test(Index::class);
+
+        foreach (['', '12-34', '99999999'] as $code) {
+            $screen->set('form.code', $code)->assertSet('codeUsage', null);
+        }
+
+        $screen->set('form.code', '11052094')
+            ->assertSet('codeUsage', ['name' => null, 'payments' => 1])
+            ->assertSee(__('conciliation.excluded_codes.erp.unnamed'))
+            ->assertDontSee(__('conciliation.excluded_codes.erp.use_as_description'))
+            ->call('useErpNameAsDescription')
+            ->assertSet('form.description', '');
+    }
+
     public function test_user_without_the_permission_cannot_add(): void
     {
         $this->expectException(AuthorizationException::class);

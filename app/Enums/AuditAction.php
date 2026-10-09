@@ -15,6 +15,14 @@ enum AuditAction: string
     case ExcludedCodeRemoved = 'excluded_code_removed';
     case PermissionGranted = 'permission_granted';
     case PermissionRevoked = 'permission_revoked';
+    case ReconciliationCompleted = 'reconciliation_completed';
+    case SuggestionConfirmed = 'suggestion_confirmed';
+    case SuggestionRejected = 'suggestion_rejected';
+    case ManualLinkCreated = 'manual_link_created';
+    case LinkRemoved = 'link_removed';
+    case AuthorizationClosedWithDiscount = 'authorization_closed_with_discount';
+    case AuthorizationCreatedInReconciliation = 'authorization_created_in_reconciliation';
+    case ReconciliationSettingsChanged = 'reconciliation_settings_changed';
 
     public function label(): string
     {

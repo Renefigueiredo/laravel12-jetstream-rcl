@@ -36,6 +36,10 @@
                         </a>
 
                         @if ($session->status === SessionStatus::Processed)
+                            <a href="{{ route('reconciliation.show', $session) }}" class="inline-flex items-center rounded-md bg-indigo-700 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-indigo-600 focus:outline-2 focus:outline-offset-2 focus:outline-indigo-500">
+                                {{ __('conciliation.reconciliation.open') }}
+                            </a>
+
                             <x-secondary-button type="button" wire:click="$set('confirmingReopen', true)">
                                 {{ __('conciliation.sessions.reopen.action') }}
                             </x-secondary-button>
@@ -64,6 +68,18 @@
 
                     @if ($isOpen && ! $engineEnabled)
                         <p class="text-gray-700">{{ __('conciliation.sessions.execute.engine_disabled') }}</p>
+                    @endif
+
+                    @if ($session->status === SessionStatus::Processed && $session->currentRun?->totals)
+                        <p class="text-gray-900">
+                            {{ __('conciliation.reconciliation.panel_summary', [
+                                'automatic' => $session->currentRun->totals['reconciled_automatically'],
+                                'authorizations' => $session->currentRun->totals['authorizations'],
+                                'percent' => $session->currentRun->totals['automatic_percent'],
+                                'awaiting' => $session->currentRun->totals['awaiting_decision'],
+                                'when' => $session->currentRun->finished_at->timezone($timezone)->format('d/m/Y H:i'),
+                            ]) }}
+                        </p>
                     @endif
 
                     @if ($session->status === SessionStatus::Processing)
@@ -131,6 +147,8 @@
             </x-slot>
         </x-confirmation-modal>
     @endif
+
+    <x-refusal-modal :message="$refusalMessage" />
 
     @if ($canDelete)
         <x-confirmation-modal wire:model.live="confirmingDeletion">

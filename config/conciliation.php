@@ -69,12 +69,33 @@ return [
     | Reconciliation Engine
     |--------------------------------------------------------------------------
     |
-    | The engine is delivered by a later module. While disabled, sessions can
-    | be prepared but the reconciliation cannot be executed.
+    | While disabled, sessions can be prepared but the reconciliation cannot
+    | be executed.
     |
     */
 
-    'engine_enabled' => (bool) env('CONCILIATION_ENGINE_ENABLED', false),
+    'engine_enabled' => (bool) env('CONCILIATION_ENGINE_ENABLED', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Matching Rules
+    |--------------------------------------------------------------------------
+    |
+    | Score thresholds and reading windows of the engine. The tolerance and the
+    | surcharge cap are changed by administrators and live in the database.
+    |
+    */
+
+    'engine' => [
+        'automatic_threshold' => (int) env('CONCILIATION_ENGINE_AUTOMATIC_THRESHOLD', 90),
+        'suggestion_threshold' => (int) env('CONCILIATION_ENGINE_SUGGESTION_THRESHOLD', 60),
+        'supplier_threshold' => (int) env('CONCILIATION_ENGINE_SUPPLIER_THRESHOLD', 90),
+        'lookback_months' => (int) env('CONCILIATION_ENGINE_LOOKBACK_MONTHS', 3),
+        'suggestions_per_authorization' => (int) env('CONCILIATION_ENGINE_SUGGESTIONS_PER_AUTHORIZATION', 5),
+        'card_species_marker' => env('CONCILIATION_ENGINE_CARD_SPECIES_MARKER', 'FATURA CARTAO'),
+        'card_method_marker' => env('CONCILIATION_ENGINE_CARD_METHOD_MARKER', 'CARTAO'),
+        'lock_wait_seconds' => (int) env('CONCILIATION_ENGINE_LOCK_WAIT_SECONDS', 600),
+    ],
 
     /*
     |--------------------------------------------------------------------------

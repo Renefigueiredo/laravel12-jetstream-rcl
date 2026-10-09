@@ -12,6 +12,7 @@ use App\Actions\Conciliation\SubmitSpreadsheet;
 use App\Enums\ImportAttemptStatus;
 use App\Enums\ImportSlot;
 use App\Enums\SessionStatus;
+use App\Livewire\Concerns\ShowsRefusal;
 use App\Models\ImportAttempt;
 use App\Models\ReconciliationSession;
 use Illuminate\Contracts\View\View;
@@ -23,6 +24,7 @@ use Livewire\WithFileUploads;
 
 class Show extends Component
 {
+    use ShowsRefusal;
     use WithFileUploads;
 
     #[Locked]
@@ -195,7 +197,7 @@ class Show extends Component
         try {
             $deleteSession->handle(auth()->user(), $session);
         } catch (ActionRefusedException $exception) {
-            $this->dispatch('banner-message', style: 'danger', message: $exception->getMessage());
+            $this->showRefusal($exception->getMessage());
             $this->refreshState();
 
             return;
@@ -238,7 +240,7 @@ class Show extends Component
 
             $this->dispatch('banner-message', style: 'success', message: $successMessage);
         } catch (ActionRefusedException $exception) {
-            $this->dispatch('banner-message', style: 'danger', message: $exception->getMessage());
+            $this->showRefusal($exception->getMessage());
         }
 
         $this->refreshState();

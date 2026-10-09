@@ -58,6 +58,7 @@ class DeleteSession
                 null,
             );
 
+            $session->runs()->delete();
             $session->delete();
 
             return [

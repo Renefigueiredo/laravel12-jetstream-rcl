@@ -55,4 +55,6 @@
     </x-dialog-modal>
 
     <x-filament-actions::modals />
+
+    <x-refusal-modal :message="$refusalMessage" />
 </div>

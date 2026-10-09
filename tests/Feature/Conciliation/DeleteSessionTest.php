@@ -125,7 +125,9 @@ class DeleteSessionTest extends TestCase
             ->test(Show::class, ['session' => $processed])
             ->call('delete')
             ->assertNoRedirect()
-            ->assertDispatched('banner-message', style: 'danger', message: __('conciliation.sessions.delete.processed'));
+            ->assertSet('showingRefusal', true)
+            ->assertSee(__('conciliation.sessions.refused_heading'))
+            ->assertSee(__('conciliation.sessions.delete.processed'));
 
         $this->assertNotNull($processed->fresh());
     }

@@ -177,7 +177,8 @@ class ExcludedCodeListTest extends TestCase
 
         $screen->call('removeCode', $code->id)
             ->assertOk()
-            ->assertDispatched('banner-message', style: 'danger', message: __('conciliation.excluded_codes.remove.already_removed'));
+            ->assertSet('showingRefusal', true)
+            ->assertSee(__('conciliation.excluded_codes.remove.already_removed'));
 
         $this->assertSame(1, AuditLog::query()->count());
     }
