@@ -258,6 +258,7 @@ final class Matcher
 
         foreach ($authorizations as $authorization) {
             $balance = $authorization->balanceCents;
+            $openInPlan = $authorization->planAmounts;
             $candidates = [];
 
             foreach ($claims as $paymentId => $claimants) {
@@ -272,6 +273,10 @@ final class Matcher
 
             foreach ($candidates as $payment) {
                 if ($balance <= 0 || $payment->amountCents - $balance > $parameters->toleranceFor($balance)) {
+                    continue;
+                }
+
+                if ($openInPlan !== null && ! $this->takeFromPlan($openInPlan, $payment->amountCents, $parameters)) {
                     continue;
                 }
 
@@ -338,6 +343,10 @@ final class Matcher
      */
     private function installmentReferences(AuthorizationCandidate $authorization): array
     {
+        if ($authorization->planAmounts !== null) {
+            return array_values(array_unique($authorization->planAmounts));
+        }
+
         $references = $authorization->installmentAmounts;
 
         if ($authorization->installments !== null && $authorization->installments > 1) {
@@ -345,6 +354,25 @@ final class Matcher
         }
 
         return array_values(array_unique(array_filter($references, fn (int $cents): bool => $cents > 0)));
+    }
+
+    /**
+     * Each instalment of a plan takes one payment: remove from the open ones the first that the
+     * amount matches, and tell whether there was one.
+     *
+     * @param  list<int>  $openInPlan
+     */
+    private function takeFromPlan(array &$openInPlan, int $amountCents, EngineParameters $parameters): bool
+    {
+        foreach ($openInPlan as $index => $installmentCents) {
+            if (abs($amountCents - $installmentCents) <= $parameters->toleranceFor($installmentCents)) {
+                unset($openInPlan[$index]);
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

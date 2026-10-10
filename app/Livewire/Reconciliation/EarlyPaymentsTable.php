@@ -3,6 +3,7 @@
 namespace App\Livewire\Reconciliation;
 
 use App\Enums\SuggestionStatus;
+use App\Livewire\Concerns\FiltersByPeriodAndAmount;
 use App\Models\ReconciliationSession;
 use App\Models\ReconciliationSuggestion;
 use App\Support\Money;
@@ -13,6 +14,7 @@ use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Table;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -21,6 +23,7 @@ use Livewire\Component;
 
 class EarlyPaymentsTable extends Component implements HasActions, HasSchemas, HasTable
 {
+    use FiltersByPeriodAndAmount;
     use InteractsWithActions;
     use InteractsWithSchemas;
     use InteractsWithTable;
@@ -58,6 +61,7 @@ class EarlyPaymentsTable extends Component implements HasActions, HasSchemas, Ha
                 TextColumn::make('authorization.supplier_name')
                     ->label(__('conciliation.reconciliation.columns.authorization'))
                     ->description(fn (ReconciliationSuggestion $record): string => Money::format($record->authorization->amount_cents))
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $this->searchPair($query, $search))
                     ->wrap(),
                 TextColumn::make('authorization.authorized_on')
                     ->label(__('conciliation.reconciliation.columns.authorized_on'))
@@ -73,6 +77,13 @@ class EarlyPaymentsTable extends Component implements HasActions, HasSchemas, Ha
                     ->label(__('conciliation.reconciliation.columns.score'))
                     ->alignEnd(),
             ])
+            ->filters([
+                ...$this->authorizationFilters('authorization'),
+                ...$this->paymentFilters('payment'),
+            ])
+            ->filtersLayout(FiltersLayout::AboveContentCollapsible)
+            ->filtersFormColumns(4)
+            ->searchPlaceholder(__('conciliation.filters.search.pairs'))
             ->defaultSort('score', 'desc')
             ->defaultPaginationPageOption(25)
             ->emptyStateHeading(__('conciliation.reconciliation.early.empty'));

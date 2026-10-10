@@ -3,6 +3,7 @@
 namespace App\Livewire\Reconciliation;
 
 use App\Enums\SkipReason;
+use App\Livewire\Concerns\FiltersByPeriodAndAmount;
 use App\Models\ReconciliationSession;
 use App\Models\ReconciliationSkip;
 use App\Support\Money;
@@ -13,6 +14,7 @@ use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Contracts\View\View;
@@ -24,6 +26,7 @@ use Livewire\Component;
 
 class ExcludedTable extends Component implements HasActions, HasSchemas, HasTable
 {
+    use FiltersByPeriodAndAmount;
     use InteractsWithActions;
     use InteractsWithSchemas;
     use InteractsWithTable;
@@ -97,6 +100,7 @@ class ExcludedTable extends Component implements HasActions, HasSchemas, HasTabl
                         $record->payment->paid_on->format('d/m/Y'),
                         $record->payment->species,
                     ])))
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $this->searchPayment($query, $search, 'payment'))
                     ->wrap(),
                 TextColumn::make('payment.amount_cents')
                     ->label(__('conciliation.reconciliation.columns.paid'))
@@ -104,12 +108,16 @@ class ExcludedTable extends Component implements HasActions, HasSchemas, HasTabl
                     ->alignEnd(),
             ])
             ->filters([
+                ...$this->paymentFilters('payment'),
                 SelectFilter::make('operation_code')
                     ->label(__('conciliation.excluded_codes.code'))
                     ->options(fn (): array => collect(array_keys(array_filter($this->codes)))
                         ->mapWithKeys(fn (string|int $code): array => [(string) $code => (string) $code])
                         ->all()),
             ])
+            ->filtersLayout(FiltersLayout::AboveContentCollapsible)
+            ->filtersFormColumns(4)
+            ->searchPlaceholder(__('conciliation.filters.search.payments'))
             ->defaultSort('id')
             ->defaultPaginationPageOption(25)
             ->emptyStateHeading(__('conciliation.reconciliation.excluded.empty'));

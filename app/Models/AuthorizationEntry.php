@@ -73,6 +73,25 @@ class AuthorizationEntry extends Model
     }
 
     /**
+     * The plan of instalments the operator informed. It follows the identity of the
+     * authorization, so it survives the spreadsheet being replaced.
+     *
+     * @return HasOne<InstallmentPlan, $this>
+     */
+    public function plan(): HasOne
+    {
+        return $this->hasOne(InstallmentPlan::class, 'authorization_identity_key', 'identity_key');
+    }
+
+    /**
+     * @return HasOne<AuthorizationForecast, $this>
+     */
+    public function forecast(): HasOne
+    {
+        return $this->hasOne(AuthorizationForecast::class);
+    }
+
+    /**
      * @return HasMany<ReconciliationSuggestion, $this>
      */
     public function suggestions(): HasMany

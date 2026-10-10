@@ -23,6 +23,8 @@ enum AuditAction: string
     case AuthorizationClosedWithDiscount = 'authorization_closed_with_discount';
     case AuthorizationCreatedInReconciliation = 'authorization_created_in_reconciliation';
     case ReconciliationSettingsChanged = 'reconciliation_settings_changed';
+    case InstallmentPlanSaved = 'installment_plan_saved';
+    case InstallmentPlanRemoved = 'installment_plan_removed';
 
     public function label(): string
     {

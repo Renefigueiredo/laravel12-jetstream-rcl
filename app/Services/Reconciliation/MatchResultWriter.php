@@ -25,6 +25,7 @@ class MatchResultWriter
         protected ReconciliationLinker $linker,
         protected RunTotals $totals,
         protected AuditRecorder $audit,
+        protected InstallmentForecaster $forecaster,
     ) {}
 
     /**
@@ -76,6 +77,8 @@ class MatchResultWriter
             $this->insertSkips($run, $loaded->skips);
 
             $run->update(['status' => ReconciliationRunStatus::Completed, 'finished_at' => now()]);
+
+            $this->forecaster->refreshAll();
 
             $totals = $this->totals->for($run);
 

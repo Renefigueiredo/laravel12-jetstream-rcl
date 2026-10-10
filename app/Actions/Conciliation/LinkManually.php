@@ -5,18 +5,16 @@ namespace App\Actions\Conciliation;
 use App\Enums\AuditAction;
 use App\Enums\DifferenceTreatment;
 use App\Enums\DifferenceType;
-use App\Enums\ImportFileStatus;
 use App\Enums\LinkOrigin;
-use App\Enums\SessionStatus;
 use App\Models\AuthorizationEntry;
 use App\Models\PaymentEntry;
 use App\Models\ReconciliationLink;
 use App\Models\User;
 use App\Services\Audit\AuditRecorder;
+use App\Services\Reconciliation\AuthorizationAvailability;
 use App\Services\Reconciliation\DifferenceDecision;
 use App\Services\Reconciliation\EngineParametersFactory;
 use App\Services\Reconciliation\LinkAttributes;
-use App\Services\Reconciliation\Matching\EngineParameters;
 use App\Services\Reconciliation\ReconciliationDecisions;
 use App\Services\Reconciliation\ReconciliationLinker;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +27,7 @@ class LinkManually
         protected ReconciliationLinker $linker,
         protected ReconciliationDecisions $decisions,
         protected EngineParametersFactory $parameters,
+        protected AuthorizationAvailability $availability,
     ) {}
 
     /**
@@ -67,7 +66,7 @@ class LinkManually
             $run = $this->decisions->runOf($payments->first());
             $parameters = $this->parameters->fromRun($run);
 
-            $this->assertAuthorizationCanReceive($authorization, $payments->first(), $parameters);
+            $this->availability->assertCanReceive($authorization, $payments->first(), $parameters);
 
             $links = [];
             $last = $payments->count() - 1;
@@ -121,38 +120,5 @@ class LinkManually
 
             return $links;
         });
-    }
-
-    /**
-     * The authorization must be active and belong to the session of the payments, or still be
-     * open in an earlier processed session inside the window (or already receiving payments).
-     *
-     * @throws ActionRefusedException
-     */
-    protected function assertAuthorizationCanReceive(AuthorizationEntry $authorization, PaymentEntry $payment, EngineParameters $parameters): void
-    {
-        if ($authorization->import_file_id !== null && $authorization->importFile->status !== ImportFileStatus::Active) {
-            throw new ActionRefusedException(__('conciliation.reconciliation.errors.authorization_not_available'));
-        }
-
-        if ($authorization->balanceCents() === 0) {
-            throw new ActionRefusedException(__('conciliation.reconciliation.errors.authorization_settled'));
-        }
-
-        if ($authorization->reconciliation_session_id === $payment->reconciliation_session_id) {
-            return;
-        }
-
-        $session = $authorization->session;
-        $paymentPeriod = $payment->session->period;
-        $windowStart = $paymentPeriod->copy()->startOfMonth()->subMonths($parameters->lookbackMonths);
-
-        $available = $session->status === SessionStatus::Processed
-            && $session->period->lte($paymentPeriod)
-            && ($session->period->gte($windowStart) || ($authorization->state?->links_count ?? 0) > 0);
-
-        if (! $available) {
-            throw new ActionRefusedException(__('conciliation.reconciliation.errors.authorization_not_available'));
-        }
     }
 }

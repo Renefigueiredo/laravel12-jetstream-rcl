@@ -14,6 +14,19 @@ class PaymentConditionParserTest extends TestCase
         $this->assertSame($installments, (new PaymentConditionParser)->installments($condition));
     }
 
+    public function test_condition_gives_the_terms_in_days_when_it_has_them(): void
+    {
+        $parser = new PaymentConditionParser;
+
+        $this->assertSame([30, 60, 90], $parser->termDays('30/60/90 dias'));
+        $this->assertSame([30, 60], $parser->termDays('30 / 60'));
+        $this->assertSame([30], $parser->termDays('30 dias'));
+        $this->assertNull($parser->termDays('3x'));
+        $this->assertNull($parser->termDays('A vista'));
+        $this->assertNull($parser->termDays('488,02'));
+        $this->assertNull($parser->termDays(null));
+    }
+
     /**
      * @return array<string, array{0: string|null, 1: int|null}>
      */

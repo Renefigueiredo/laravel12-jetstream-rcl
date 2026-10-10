@@ -4,6 +4,7 @@ namespace App\Livewire\Reconciliation;
 
 use App\Enums\OperatingUnit;
 use App\Enums\PendingItemKind;
+use App\Livewire\Concerns\FiltersByPeriodAndAmount;
 use App\Livewire\Reconciliation\Concerns\DecidesPendingItems;
 use App\Livewire\Reconciliation\Concerns\ShowsEntryDetails;
 use App\Models\PaymentEntry;
@@ -17,6 +18,7 @@ use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Contracts\View\View;
@@ -28,6 +30,7 @@ use Livewire\Component;
 class InvestigationTable extends Component implements HasActions, HasSchemas, HasTable
 {
     use DecidesPendingItems;
+    use FiltersByPeriodAndAmount;
     use InteractsWithActions;
     use InteractsWithSchemas;
     use InteractsWithTable;
@@ -72,7 +75,7 @@ class InvestigationTable extends Component implements HasActions, HasSchemas, Ha
                         $record->transaction_type,
                     ])))
                     ->wrap()
-                    ->searchable(),
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $this->searchPayment($query, $search)),
                 TextColumn::make('operation_code')
                     ->label(__('conciliation.reconciliation.columns.operation'))
                     ->description(fn (PaymentEntry $record): ?string => $record->operation_name)
@@ -84,6 +87,7 @@ class InvestigationTable extends Component implements HasActions, HasSchemas, Ha
                     ->alignEnd(),
             ])
             ->filters([
+                ...$this->paymentFilters(),
                 SelectFilter::make('unit')
                     ->label(__('conciliation.reconciliation.columns.unit'))
                     ->options(collect(OperatingUnit::cases())->mapWithKeys(
@@ -100,6 +104,9 @@ class InvestigationTable extends Component implements HasActions, HasSchemas, Ha
                     ->label(__('conciliation.reconciliation.columns.card'))
                     ->options(fn (): array => $this->distinct('card')),
             ])
+            ->filtersLayout(FiltersLayout::AboveContentCollapsible)
+            ->filtersFormColumns(4)
+            ->searchPlaceholder(__('conciliation.filters.search.payments'))
             ->defaultSort('paid_on')
             ->recordActions([
                 $this->linkToAuthorizationAction(),

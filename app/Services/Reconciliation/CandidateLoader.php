@@ -7,6 +7,7 @@ use App\Enums\ImportFileStatus;
 use App\Enums\SessionStatus;
 use App\Enums\SkipReason;
 use App\Models\AuthorizationEntry;
+use App\Models\InstallmentPlan;
 use App\Models\PaymentEntry;
 use App\Models\ReconciliationLink;
 use App\Models\ReconciliationPairBlock;
@@ -15,6 +16,7 @@ use App\Services\ExcludedCodes\ExcludedCodeSnapshot;
 use App\Services\ExcludedCodes\OperationCode;
 use App\Services\Reconciliation\Matching\AuthorizationCandidate;
 use App\Services\Reconciliation\Matching\EngineParameters;
+use App\Services\Reconciliation\Matching\InstallmentSchedule;
 use App\Services\Reconciliation\Matching\Matcher;
 use App\Services\Reconciliation\Matching\PaymentCandidate;
 use App\Services\Reconciliation\Matching\PaymentConditionParser;
@@ -27,6 +29,8 @@ class CandidateLoader
     public function __construct(
         protected SupplierNameNormalizer $normalizer,
         protected PaymentConditionParser $conditions,
+        protected InstallmentSchedule $schedule,
+        protected EngineParametersFactory $parameters,
     ) {}
 
     /**
@@ -261,7 +265,9 @@ class CandidateLoader
             }
         }
 
-        return array_map(fn (AuthorizationCandidate $authorization): AuthorizationCandidate => isset($amounts[$authorization->id])
+        $planAmounts = $this->openPlanAmounts($authorizations);
+
+        return array_map(fn (AuthorizationCandidate $authorization): AuthorizationCandidate => isset($amounts[$authorization->id]) || array_key_exists($authorization->id, $planAmounts)
             ? new AuthorizationCandidate(
                 id: $authorization->id,
                 supplier: $authorization->supplier,
@@ -272,9 +278,65 @@ class CandidateLoader
                 paysByCard: $authorization->paysByCard,
                 card: $authorization->card,
                 installments: $authorization->installments,
-                installmentAmounts: array_values(array_unique($amounts[$authorization->id])),
+                installmentAmounts: array_values(array_unique($amounts[$authorization->id] ?? [])),
+                planAmounts: $planAmounts[$authorization->id] ?? null,
             )
             : $authorization, $authorizations);
+    }
+
+    /**
+     * For the authorizations with a plan informed by the operator, the amounts of the
+     * instalments nobody paid yet.
+     *
+     * @param  list<AuthorizationCandidate>  $authorizations
+     * @return array<int, list<int>> By authorization id
+     */
+    protected function openPlanAmounts(array $authorizations): array
+    {
+        $byKey = [];
+
+        foreach ($authorizations as $authorization) {
+            $byKey[$authorization->identityKey] = $authorization;
+        }
+
+        $open = [];
+
+        foreach (array_chunk(array_keys($byKey), 500) as $keys) {
+            $plans = InstallmentPlan::query()->with('items')->whereIn('authorization_identity_key', $keys)->get();
+
+            if ($plans->isEmpty()) {
+                continue;
+            }
+
+            $authorizationIds = $plans->map(fn (InstallmentPlan $plan): int => $byKey[$plan->authorization_identity_key]->id)->all();
+
+            $payments = ReconciliationLink::query()
+                ->join('payment_entries', 'payment_entries.id', '=', 'reconciliation_links.payment_entry_id')
+                ->whereIn('reconciliation_links.authorization_entry_id', $authorizationIds)
+                ->toBase()
+                ->get(['reconciliation_links.authorization_entry_id', 'payment_entries.id', 'payment_entries.amount_cents', 'payment_entries.paid_on'])
+                ->groupBy('authorization_entry_id');
+
+            foreach ($plans as $plan) {
+                $authorization = $byKey[$plan->authorization_identity_key];
+
+                $open[$authorization->id] = $this->schedule->openAmounts($this->schedule->for(
+                    $authorization->authorizedCents,
+                    $authorization->authorizedOn,
+                    null,
+                    $plan->toSchedule(),
+                    ($payments[$authorization->id] ?? collect())->map(fn (object $payment): array => [
+                        'id' => (int) $payment->id,
+                        'amount_cents' => (int) $payment->amount_cents,
+                        'paid_on' => substr((string) $payment->paid_on, 0, 10),
+                    ])->values()->all(),
+                    null,
+                    $this->parameters->fromSettings(),
+                ));
+            }
+        }
+
+        return $open;
     }
 
     /**

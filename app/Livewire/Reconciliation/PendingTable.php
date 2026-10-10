@@ -3,12 +3,15 @@
 namespace App\Livewire\Reconciliation;
 
 use App\Enums\PendingItemKind;
+use App\Livewire\Concerns\FiltersByPeriodAndAmount;
 use App\Livewire\Reconciliation\Concerns\DecidesPendingItems;
 use App\Livewire\Reconciliation\Concerns\ShowsEntryDetails;
 use App\Models\PaymentEntry;
 use App\Models\PendingItem;
 use App\Models\ReconciliationSession;
 use App\Services\Reconciliation\EngineParametersFactory;
+use App\Services\Reconciliation\InstallmentForecaster;
+use App\Services\Reconciliation\Matching\InstallmentSchedule;
 use App\Support\Money;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
@@ -17,6 +20,7 @@ use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Contracts\View\View;
@@ -29,6 +33,7 @@ use Livewire\Component;
 class PendingTable extends Component implements HasActions, HasSchemas, HasTable
 {
     use DecidesPendingItems;
+    use FiltersByPeriodAndAmount;
     use InteractsWithActions;
     use InteractsWithSchemas;
     use InteractsWithTable;
@@ -103,9 +108,7 @@ class PendingTable extends Component implements HasActions, HasSchemas, HasTable
                     ->description(fn (PendingItem $record): ?string => $this->authorizationDetails($record))
                     ->action($this->authorizationDetailsAction('openAuthorization'))
                     ->wrap()
-                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->where(fn (Builder $query) => $query
-                        ->where('authorization_supplier', 'like', '%'.$search.'%')
-                        ->orWhere('payment_supplier', 'like', '%'.$search.'%'))),
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $this->searchPair($query, $search)),
                 TextColumn::make('authorization.amount_cents')
                     ->label(__('conciliation.reconciliation.columns.authorized'))
                     ->formatStateUsing(fn (?int $state): string => Money::format($state))
@@ -139,6 +142,8 @@ class PendingTable extends Component implements HasActions, HasSchemas, HasTable
                     ->alignEnd(),
             ])
             ->filters([
+                ...$this->authorizationFilters('authorization'),
+                ...$this->paymentFilters('payment'),
                 SelectFilter::make('card')
                     ->label(__('conciliation.reconciliation.columns.card'))
                     ->options(fn (): array => $this->cards())
@@ -148,6 +153,9 @@ class PendingTable extends Component implements HasActions, HasSchemas, HasTable
                             ->where('authorization_card', $data['value'])
                             ->orWhere('payment_card', $data['value']))),
             ])
+            ->filtersLayout(FiltersLayout::AboveContentCollapsible)
+            ->filtersFormColumns(4)
+            ->searchPlaceholder(__('conciliation.filters.search.pairs'))
             ->recordActions([
                 $this->confirmAction(),
                 $this->rejectAction(),
@@ -177,7 +185,7 @@ class PendingTable extends Component implements HasActions, HasSchemas, HasTable
     protected function items(): Builder
     {
         return PendingItem::query()
-            ->with(['suggestion.run', 'authorization.state', 'authorization.session', 'authorization.links.payment', 'payment'])
+            ->with(['suggestion.run', 'authorization.state', 'authorization.session', 'authorization.links.payment', 'authorization.plan.items', 'payment'])
             ->where('reconciliation_session_id', $this->sessionId)
             ->when(
                 $this->classification === 'todos',
@@ -236,7 +244,7 @@ class PendingTable extends Component implements HasActions, HasSchemas, HasTable
             $item->paid_before_authorization ? __('conciliation.reconciliation.warnings.help.paid_before_authorization') : null,
             $item->card_mismatch ? __('conciliation.reconciliation.warnings.help.card_mismatch') : null,
             $this->isNotTheForeseenInstallment($item) ? __('conciliation.reconciliation.warnings.help.not_the_installment', [
-                'amount' => Money::format(intdiv($item->authorization->amount_cents, $item->authorization->foreseenInstallments())),
+                'amount' => implode(', ', array_map(fn (int $cents): string => Money::format($cents), $this->foreseenAmounts($item))),
             ]) : null,
         ]);
 
@@ -244,7 +252,7 @@ class PendingTable extends Component implements HasActions, HasSchemas, HasTable
     }
 
     /**
-     * A partial payment for an authorization in instalments whose amount is not the instalment foreseen.
+     * A partial payment for an authorization in instalments whose amount is none of the instalments foreseen.
      */
     protected function isNotTheForeseenInstallment(PendingItem $item): bool
     {
@@ -252,17 +260,36 @@ class PendingTable extends Component implements HasActions, HasSchemas, HasTable
             return false;
         }
 
-        $installments = $item->authorization->foreseenInstallments();
+        $foreseen = $this->foreseenAmounts($item);
+        $run = $item->suggestion?->run;
 
-        if ($installments === null || $installments < 2) {
+        if ($foreseen === [] || $run === null) {
             return false;
         }
 
-        $foreseen = intdiv($item->authorization->amount_cents, $installments);
-        $run = $item->suggestion?->run;
+        $parameters = app(EngineParametersFactory::class)->fromRun($run);
 
-        return $run !== null
-            && abs($item->payment->amount_cents - $foreseen) > app(EngineParametersFactory::class)->fromRun($run)->toleranceFor($foreseen);
+        foreach ($foreseen as $amount) {
+            if (abs($item->payment->amount_cents - $amount) <= $parameters->toleranceFor($amount)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @return list<int> Amounts of the instalments of the authorization nobody paid yet
+     */
+    protected function foreseenAmounts(PendingItem $item): array
+    {
+        return array_values(array_unique(app(InstallmentSchedule::class)->openAmounts(
+            app(InstallmentForecaster::class)->installments(
+                $item->authorization,
+                '',
+                $item->suggestion?->run === null ? null : app(EngineParametersFactory::class)->fromRun($item->suggestion->run),
+            ),
+        )));
     }
 
     protected function authorizationDetails(PendingItem $item): ?string

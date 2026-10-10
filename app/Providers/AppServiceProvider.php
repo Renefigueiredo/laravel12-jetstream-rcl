@@ -10,6 +10,7 @@ use App\Enums\UserRole;
 use App\Models\AuthorizationEntry;
 use App\Models\ExcludedCodeImport;
 use App\Models\ExcludedOperationCode;
+use App\Models\InstallmentPlan;
 use App\Models\ReconciliationLink;
 use App\Models\ReconciliationRun;
 use App\Models\ReconciliationSession;
@@ -51,6 +52,7 @@ class AppServiceProvider extends ServiceProvider
             'reconciliation_suggestion' => ReconciliationSuggestion::class,
             'authorization_entry' => AuthorizationEntry::class,
             'reconciliation_settings' => ReconciliationSettings::class,
+            'installment_plan' => InstallmentPlan::class,
         ]);
 
         Gate::define('view-session-history', fn (User $user): bool => $user->role === UserRole::Administrador);
