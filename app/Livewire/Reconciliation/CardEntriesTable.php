@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Reconciliation;
 
+use App\Livewire\Concerns\FiltersByPeriodAndAmount;
 use App\Livewire\Reconciliation\Concerns\DecidesPendingItems;
 use App\Livewire\Reconciliation\Concerns\ShowsEntryDetails;
 use App\Models\AuthorizationEntry;
@@ -16,6 +17,7 @@ use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Table;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -27,6 +29,7 @@ use Livewire\Component;
 class CardEntriesTable extends Component implements HasActions, HasSchemas, HasTable
 {
     use DecidesPendingItems;
+    use FiltersByPeriodAndAmount;
     use InteractsWithActions;
     use InteractsWithSchemas;
     use InteractsWithTable;
@@ -87,12 +90,16 @@ class CardEntriesTable extends Component implements HasActions, HasSchemas, HasT
                         $record->payment_condition,
                     ])))
                     ->wrap()
-                    ->searchable(),
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $this->searchAuthorization($query, $search)),
                 TextColumn::make('amount_cents')
                     ->label(__('conciliation.reconciliation.columns.authorized'))
                     ->formatStateUsing(fn (?int $state): string => Money::format($state))
                     ->alignEnd(),
             ])
+            ->filters($this->authorizationFilters())
+            ->filtersLayout(FiltersLayout::AboveContentCollapsible)
+            ->filtersFormColumns(4)
+            ->searchPlaceholder(__('conciliation.filters.search.authorizations'))
             ->defaultSort('authorized_on')
             ->recordActions([$this->linkAction(), $this->authorizationDetailsAction()])
             ->defaultPaginationPageOption(10)
@@ -114,12 +121,16 @@ class CardEntriesTable extends Component implements HasActions, HasSchemas, HasT
                         trim($record->operation_code.' '.$record->operation_name),
                     ])))
                     ->wrap()
-                    ->searchable(),
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $this->searchPayment($query, $search)),
                 TextColumn::make('amount_cents')
                     ->label(__('conciliation.reconciliation.columns.paid'))
                     ->formatStateUsing(fn (?int $state): string => Money::format($state))
                     ->alignEnd(),
             ])
+            ->filters($this->paymentFilters())
+            ->filtersLayout(FiltersLayout::AboveContentCollapsible)
+            ->filtersFormColumns(4)
+            ->searchPlaceholder(__('conciliation.filters.search.payments'))
             ->defaultSort('paid_on')
             ->recordActions([$this->linkToAuthorizationAction(), $this->createAuthorizationAction(), $this->paymentDetailsAction()])
             ->defaultPaginationPageOption(10)

@@ -11,6 +11,7 @@ final readonly class AuthorizationCandidate
      * @param  bool  $paysByCard  Whether the informed payment method is a card
      * @param  int|null  $installments  Instalments foreseen by the payment condition, when recognised
      * @param  list<int>  $installmentAmounts  Amounts of payments already linked as "still owed"
+     * @param  list<int>|null  $planAmounts  Amounts of the instalments still open in the plan the operator informed; null without a plan
      */
     public function __construct(
         public int $id,
@@ -23,5 +24,6 @@ final readonly class AuthorizationCandidate
         public ?string $card = null,
         public ?int $installments = null,
         public array $installmentAmounts = [],
+        public ?array $planAmounts = null,
     ) {}
 }

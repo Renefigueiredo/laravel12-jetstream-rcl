@@ -130,7 +130,10 @@ class DecisionScreenTest extends TestCase
                 __('conciliation.reconciliation.picker.total'),
                 __('conciliation.reconciliation.picker.balance'),
                 __('conciliation.reconciliation.picker.difference'),
+                __('conciliation.reconciliation.picker.amount_from'),
+                __('conciliation.reconciliation.picker.paid_from'),
             ])
+            ->assertMountedActionModalDontSee(__('conciliation.reconciliation.picker.every_session'))
             ->setTableActionData(['payments' => [$first->id, $second->id]])
             ->callMountedTableAction()
             ->assertHasNoTableActionErrors()

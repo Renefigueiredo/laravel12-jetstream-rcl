@@ -44,3 +44,12 @@
 [x-cloak] {
     display: none;
 }
+
+/*
+  The search field of a table says what it searches by ("Fornecedor, pedido ou valor"); at its
+  default width that text is cut off.
+*/
+.fi-ta-search-field {
+    width: 22rem;
+    max-width: 100%;
+}

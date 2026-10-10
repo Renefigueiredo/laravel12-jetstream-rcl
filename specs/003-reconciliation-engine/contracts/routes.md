@@ -140,3 +140,10 @@ mudança vale para as próximas execuções e para as próximas decisões de acr
 - Toda ação que cria ou desfaz vínculo exige que a sessão do pagamento esteja `Processed`.
 - Recusas mostram a mensagem e atualizam a linha com a situação atual.
 - Depois de cada ação, o cabeçalho de totais é recalculado.
+
+## Mudança feita pelo Módulo 3
+
+A escolha de autorização no "Vincular" a partir do pagamento (Pendências, Fila de investigação e
+Por cartão) lista as autorizações que podem receber o pagamento pela mesma regra da ação
+(`AuthorizationAvailability`): as da sessão, as em aberto de sessões processadas dentro da janela
+e as mais antigas que já têm pagamento. Antes listava só as da própria sessão.

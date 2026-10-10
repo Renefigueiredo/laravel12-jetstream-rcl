@@ -5,6 +5,7 @@ namespace Tests\Concerns;
 use App\Contracts\ReconciliationEngine;
 use App\Enums\ImportSlot;
 use App\Enums\LinkOrigin;
+use App\Enums\ReconciliationRunStatus;
 use App\Enums\SessionStatus;
 use App\Models\AuthorizationEntry;
 use App\Models\ImportFile;
@@ -164,5 +165,36 @@ trait BuildsReconciliations
     protected function operator(): User
     {
         return User::factory()->create();
+    }
+
+    protected function administrator(): User
+    {
+        return User::factory()->administrador()->create();
+    }
+
+    /**
+     * A processed session of a period, with a completed run to hang links on.
+     */
+    protected function processedSession(string $period): ReconciliationSession
+    {
+        $session = $this->sessionWithFiles($period);
+        $this->runFor($session, ['status' => ReconciliationRunStatus::Completed, 'finished_at' => now()]);
+
+        return $session;
+    }
+
+    /**
+     * A payment of a session already linked to an authorization.
+     *
+     * @param  array<string, mixed>  $payment  Attributes of the payment
+     * @param  array<string, mixed>  $link  Named arguments of LinkAttributes
+     */
+    protected function linkedPayment(ReconciliationSession $session, AuthorizationEntry $authorization, int $amountCents, array $payment = [], array $link = []): PaymentEntry
+    {
+        $entry = $this->payment($session, $authorization->supplier_name, $amountCents, $payment);
+
+        $this->linkPair($authorization, $entry, attributes: $link);
+
+        return $entry;
     }
 }

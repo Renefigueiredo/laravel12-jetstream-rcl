@@ -23,6 +23,7 @@ class ReconciliationLinker
     public function __construct(
         protected AuthorizationStateCalculator $states,
         protected PairScorer $scorer,
+        protected InstallmentForecaster $forecaster,
     ) {}
 
     /**
@@ -92,6 +93,7 @@ class ReconciliationLinker
             ->update(['status' => SuggestionStatus::Superseded, 'updated_at' => now()]);
 
         $this->reassessSuggestions($authorization, $state?->balance_cents ?? 0, $attributes->parameters);
+        $this->forecaster->refresh($authorization);
 
         return $link;
     }
@@ -118,6 +120,7 @@ class ReconciliationLinker
 
         $this->restoreSuggestions($authorization, $paymentId);
         $this->reassessSuggestions($authorization, $balance, $parameters);
+        $this->forecaster->refresh($authorization);
     }
 
     /**

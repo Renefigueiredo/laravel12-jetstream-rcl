@@ -31,6 +31,7 @@ class DatabaseReconciliationEngine implements ReconciliationEngine
         protected Matcher $matcher,
         protected MatchResultWriter $writer,
         protected AuthorizationStateCalculator $states,
+        protected InstallmentForecaster $forecaster,
     ) {}
 
     /**
@@ -117,6 +118,8 @@ class DatabaseReconciliationEngine implements ReconciliationEngine
                 'status' => ReconciliationRunStatus::Discarded,
                 'updated_at' => now(),
             ]);
+
+            $this->forecaster->refreshAll();
         });
     }
 

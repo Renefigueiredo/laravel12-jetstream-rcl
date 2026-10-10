@@ -167,6 +167,21 @@ class CardReconciliationTest extends TestCase
         $this->assertSame(5000, $ticket->refresh()->balanceCents());
     }
 
+    public function test_choice_of_authorization_offers_open_ones_of_earlier_sessions(): void
+    {
+        $july = $this->sessionWithFiles('2026-07-01', state: 'open');
+        $this->authorization($july, 'AGENCIA DE VIAGENS', 45000, ['payment_method' => 'Cartão de crédito', 'card' => '0798']);
+        $this->reconcile($july);
+        $august = $this->sessionWithFiles('2026-08-01', state: 'open');
+        $invoice = $this->payment($august, 'COMPANHIA AEREA', 45000, ['card' => '0798', 'species' => 'FATURA CARTAO 0798']);
+        $this->reconcile($august);
+
+        Livewire::actingAs($this->operator())
+            ->test(CardEntriesTable::class, ['sessionId' => $august->id, 'card' => '0798', 'kind' => 'payments'])
+            ->mountTableAction('linkToAuthorization', $invoice)
+            ->assertMountedActionModalSee(['AGENCIA DE VIAGENS', 'R$ 450,00']);
+    }
+
     public function test_a_payment_without_authorization_is_linked_from_the_pending_list(): void
     {
         $session = $this->sessionWithFiles(state: 'open');

@@ -159,6 +159,13 @@ precisa atingir a nota automática.
 | 900,00, `3x` | 300,00 com data anterior à autorização | vincula como parcela, com `paid_before_authorization` |
 | 900,00, `3x`, cartão 0798 | 300,00 da fatura do cartão 4931 | sugestão, `card_mismatch` |
 
+### Com plano de parcelas informado (Módulo 3)
+
+Quando o Operador informou um plano de parcelas para a autorização, as referências de parcela são
+só as parcelas em aberto do plano. A condição de pagamento e os valores já vinculados como "Ainda
+falta pagar" deixam de valer, e cada parcela do plano recebe no máximo um pagamento. Os casos
+estão em `specs/004-installment-tracking/contracts/statement-rules.md`.
+
 ## Sessões anteriores
 
 | Autorização | Lida? |

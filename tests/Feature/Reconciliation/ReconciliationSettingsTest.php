@@ -10,7 +10,6 @@ use App\Enums\UserPermission;
 use App\Livewire\Reconciliation\Settings;
 use App\Models\AuditLog;
 use App\Models\ReconciliationSettings;
-use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -22,11 +21,6 @@ class ReconciliationSettingsTest extends TestCase
 {
     use BuildsReconciliations;
     use RefreshDatabase;
-
-    protected function administrator(): User
-    {
-        return User::factory()->administrador()->create();
-    }
 
     public function test_only_who_may_configure_the_tolerance_reaches_the_screen(): void
     {

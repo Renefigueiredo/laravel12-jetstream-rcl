@@ -9,6 +9,8 @@ final class PaymentConditionParser
      */
     private const MAX_INSTALLMENTS = 120;
 
+    private const TERMS = '/^\d{1,3}( ?\/ ?\d{1,3})*( ?(DIAS|DIA|DDL))?$/';
+
     /**
      * How many instalments the payment condition of an authorization foresees.
      *
@@ -16,8 +18,7 @@ final class PaymentConditionParser
      */
     public function installments(?string $condition): ?int
     {
-        $text = strtoupper(trim((string) iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', (string) $condition)));
-        $text = (string) preg_replace('/\s+/', ' ', $text);
+        $text = $this->normalized($condition);
 
         if (preg_match('/^A VISTA$/', $text) === 1) {
             return 1;
@@ -29,10 +30,35 @@ final class PaymentConditionParser
             return $installments >= 1 && $installments <= self::MAX_INSTALLMENTS ? $installments : null;
         }
 
-        if (preg_match('/^\d{1,3}( ?\/ ?\d{1,3})*( ?(DIAS|DIA|DDL))?$/', $text) === 1) {
+        if (preg_match(self::TERMS, $text) === 1) {
             return substr_count($text, '/') + 1;
         }
 
         return null;
+    }
+
+    /**
+     * The terms in days of each instalment, when the condition gives them ("30/60/90 dias").
+     *
+     * @return list<int>|null
+     */
+    public function termDays(?string $condition): ?array
+    {
+        $text = $this->normalized($condition);
+
+        if (preg_match(self::TERMS, $text) !== 1) {
+            return null;
+        }
+
+        preg_match_all('/\d+/', $text, $found);
+
+        return array_map('intval', $found[0]);
+    }
+
+    private function normalized(?string $condition): string
+    {
+        $text = strtoupper(trim((string) iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', (string) $condition)));
+
+        return (string) preg_replace('/\s+/', ' ', $text);
     }
 }

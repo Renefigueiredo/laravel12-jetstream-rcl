@@ -18,6 +18,7 @@ use App\Models\PaymentEntry;
 use App\Models\PendingItem;
 use App\Models\ReconciliationSession;
 use App\Models\ReconciliationSuggestion;
+use App\Services\Reconciliation\AuthorizationAvailability;
 use App\Services\Reconciliation\DifferenceDecision;
 use App\Services\Reconciliation\EngineParametersFactory;
 use App\Services\Reconciliation\ReconciliationDecisions;
@@ -29,6 +30,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\ViewField;
 use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
@@ -226,7 +228,7 @@ trait DecidesPendingItems
             ->modalDescription(__('conciliation.reconciliation.actions.confirm_selected_body'))
             ->deselectRecordsAfterCompletion()
             ->action(function (Collection $records): void {
-                $this->authorize('view', ReconciliationSession::query()->findOrFail($this->sessionId));
+                $this->authorizeScreenSession();
 
                 $confirmed = 0;
                 $refused = 0;
@@ -254,7 +256,7 @@ trait DecidesPendingItems
      */
     protected function decide(callable $decision, string $success): void
     {
-        $this->authorize('view', ReconciliationSession::query()->findOrFail($this->sessionId));
+        $this->authorizeScreenSession();
 
         try {
             $decision();
@@ -353,18 +355,22 @@ trait DecidesPendingItems
      * Free payments of the session, the ones on the card of the authorization first and then
      * the ones closest to what is left to pay.
      *
-     * @return list<array{id: int, supplier: string, amount_cents: int, paid_on: string, card: string|null}>
+     * @return list<array{id: int, supplier: string, amount_cents: int, paid_on: string, paid_on_iso: string, card: string|null, session: string|null}>
      */
     protected function paymentOptions(AuthorizationEntry $authorization): array
     {
         $balance = $authorization->balanceCents();
+        $onOneSession = property_exists($this, 'sessionId');
 
         return PaymentEntry::query()
+            ->with('session.currentRun')
             ->whereIn('id', PendingItem::query()
-                ->where('reconciliation_session_id', $this->sessionId)
+                ->when($onOneSession, fn (Builder $query) => $query->where('reconciliation_session_id', $this->sessionId))
+                ->when(! $onOneSession, fn (Builder $query) => $query->where('kind', PendingItemKind::UnmatchedPayment))
                 ->whereNotNull('payment_entry_id')
                 ->select('payment_entry_id'))
             ->get()
+            ->filter(fn (PaymentEntry $payment): bool => $onOneSession || $this->mayReceive($authorization, $payment))
             ->sortBy(fn (PaymentEntry $payment): array => [
                 $authorization->card !== null && $payment->card === $authorization->card ? 0 : 1,
                 abs($payment->amount_cents - $balance),
@@ -375,10 +381,32 @@ trait DecidesPendingItems
                 'supplier' => $payment->supplier_name,
                 'amount_cents' => $payment->amount_cents,
                 'paid_on' => $payment->paid_on->format('d/m/Y'),
+                'paid_on_iso' => $payment->paid_on->toDateString(),
                 'card' => $payment->card,
+                'session' => $onOneSession ? null : $payment->session->label(),
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * Whether the authorization may receive a payment of another session, by the rule of the link action.
+     */
+    protected function mayReceive(AuthorizationEntry $authorization, PaymentEntry $payment): bool
+    {
+        $run = $payment->session->currentRun;
+
+        if ($run === null) {
+            return false;
+        }
+
+        try {
+            app(AuthorizationAvailability::class)->assertCanReceive($authorization, $payment, app(EngineParametersFactory::class)->fromRun($run));
+        } catch (ActionRefusedException) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -390,7 +418,7 @@ trait DecidesPendingItems
             return DifferenceType::Exact;
         }
 
-        $run = ReconciliationSession::query()->findOrFail($this->sessionId)->currentRun;
+        $run = PaymentEntry::query()->with('session.currentRun')->find($paymentIds[array_key_first($paymentIds)])?->session->currentRun;
 
         if ($run === null) {
             return DifferenceType::Exact;
@@ -419,12 +447,15 @@ trait DecidesPendingItems
      */
     protected function authorizationOptions(PaymentEntry $payment): array
     {
-        return AuthorizationEntry::query()
-            ->with('state')
-            ->whereIn('id', PendingItem::query()
-                ->where('reconciliation_session_id', $this->sessionId)
-                ->whereIn('kind', [PendingItemKind::UnmatchedAuthorization, PendingItemKind::OpenBalance])
-                ->select('authorization_entry_id'))
+        $run = $payment->session->currentRun;
+
+        if ($run === null) {
+            return [];
+        }
+
+        return app(AuthorizationAvailability::class)
+            ->forPayment($payment, app(EngineParametersFactory::class)->fromRun($run))
+            ->with(['state', 'session'])
             ->get()
             ->sortBy(fn (AuthorizationEntry $authorization): array => [
                 $payment->card !== null && $authorization->card === $payment->card ? 0 : 1,
@@ -437,6 +468,9 @@ trait DecidesPendingItems
                     __('conciliation.reconciliation.columns.balance_of', ['amount' => Money::format($authorization->balanceCents())]),
                     $authorization->authorized_on->format('d/m/Y'),
                     $authorization->card === null ? null : __('conciliation.reconciliation.columns.card_number', ['card' => $authorization->card]),
+                    $authorization->reconciliation_session_id === $payment->reconciliation_session_id
+                        ? null
+                        : __('conciliation.reconciliation.columns.from_session', ['period' => $authorization->session->periodLabel()]),
                 ])),
             ])
             ->all();
@@ -445,7 +479,7 @@ trait DecidesPendingItems
     protected function pairType(int|string|null $authorizationId, PaymentEntry $payment): DifferenceType
     {
         $authorization = blank($authorizationId) ? null : AuthorizationEntry::query()->with('state')->find($authorizationId);
-        $run = ReconciliationSession::query()->findOrFail($this->sessionId)->currentRun;
+        $run = $payment->session->currentRun;
 
         if ($authorization === null || $run === null) {
             return DifferenceType::Exact;
@@ -456,6 +490,17 @@ trait DecidesPendingItems
             $payment->amount_cents,
             app(EngineParametersFactory::class)->fromRun($run),
         )[0];
+    }
+
+    /**
+     * On a screen of one session the user must be allowed to see it; every action also checks
+     * the session of the payment it changes.
+     */
+    protected function authorizeScreenSession(): void
+    {
+        if (property_exists($this, 'sessionId')) {
+            $this->authorize('view', ReconciliationSession::query()->findOrFail($this->sessionId));
+        }
     }
 
     protected function authorizationOf(Model $record): AuthorizationEntry

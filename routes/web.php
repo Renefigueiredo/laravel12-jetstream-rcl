@@ -4,6 +4,7 @@ use App\Http\Controllers\ExcludedCodeTemplateController;
 use App\Http\Controllers\ImportErrorReportController;
 use App\Http\Controllers\ImportFileDownloadController;
 use App\Http\Controllers\SpreadsheetTemplateController;
+use App\Livewire\Dashboard\Show as Dashboard;
 use App\Livewire\ExcludedCodes\Index as ExcludedCodesIndex;
 use App\Livewire\Reconciliation\Settings as ReconciliationSettings;
 use App\Livewire\Reconciliation\Show as ReconciliationShow;
@@ -21,9 +22,7 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    Route::livewire('/dashboard', Dashboard::class)->name('dashboard');
 
     Route::livewire('/sessoes', Index::class)->name('sessions.index');
 

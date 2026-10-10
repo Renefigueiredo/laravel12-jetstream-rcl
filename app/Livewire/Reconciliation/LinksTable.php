@@ -6,6 +6,7 @@ use App\Actions\Conciliation\ActionRefusedException;
 use App\Actions\Conciliation\RemoveLink;
 use App\Enums\DifferenceTreatment;
 use App\Enums\LinkOrigin;
+use App\Livewire\Concerns\FiltersByPeriodAndAmount;
 use App\Livewire\Concerns\ShowsRefusal;
 use App\Livewire\Reconciliation\Concerns\ShowsEntryDetails;
 use App\Models\ReconciliationLink;
@@ -19,6 +20,7 @@ use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Contracts\View\View;
@@ -31,6 +33,7 @@ use Livewire\Component;
 
 class LinksTable extends Component implements HasActions, HasSchemas, HasTable
 {
+    use FiltersByPeriodAndAmount;
     use InteractsWithActions;
     use InteractsWithSchemas;
     use InteractsWithTable;
@@ -121,9 +124,7 @@ class LinksTable extends Component implements HasActions, HasSchemas, HasTable
                             : __('conciliation.reconciliation.columns.from_session', ['period' => $record->authorization->session->periodLabel()]),
                     ])))
                     ->wrap()
-                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->where(fn (Builder $query) => $query
-                        ->whereHas('authorization', fn (Builder $query) => $query->where('supplier_name', 'like', '%'.$search.'%'))
-                        ->orWhereHas('payment', fn (Builder $query) => $query->where('supplier_name', 'like', '%'.$search.'%')))),
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $this->searchPair($query, $search)),
                 TextColumn::make('authorization.amount_cents')
                     ->label(__('conciliation.reconciliation.columns.authorized'))
                     ->formatStateUsing(fn (?int $state): string => Money::format($state))
@@ -164,6 +165,8 @@ class LinksTable extends Component implements HasActions, HasSchemas, HasTable
                     ->color(fn (DifferenceTreatment $state): string => $state === DifferenceTreatment::Overpayment ? 'danger' : 'gray'),
             ])
             ->filters([
+                ...$this->authorizationFilters('authorization'),
+                ...$this->paymentFilters('payment'),
                 SelectFilter::make('origin')
                     ->label(__('conciliation.reconciliation.columns.origin'))
                     ->options([
@@ -207,6 +210,9 @@ class LinksTable extends Component implements HasActions, HasSchemas, HasTable
                             ->whereHas('authorization', fn (Builder $query) => $query->where('card', $data['value']))
                             ->orWhereHas('payment', fn (Builder $query) => $query->where('card', $data['value'])))),
             ])
+            ->filtersLayout(FiltersLayout::AboveContentCollapsible)
+            ->filtersFormColumns(4)
+            ->searchPlaceholder(__('conciliation.filters.search.pairs'))
             ->defaultSort('id', 'desc')
             ->recordActions([
                 Action::make('unlink')
@@ -215,7 +221,9 @@ class LinksTable extends Component implements HasActions, HasSchemas, HasTable
                     ->visible(fn (ReconciliationLink $record): bool => $record->payment->reconciliation_session_id === $this->sessionId)
                     ->requiresConfirmation()
                     ->modalHeading(__('conciliation.reconciliation.actions.unlink_heading'))
-                    ->modalDescription(__('conciliation.reconciliation.actions.unlink_body'))
+                    ->modalDescription(fn (ReconciliationLink $record): string => $record->undoingDeletesTheAuthorization()
+                        ? __('conciliation.dashboard.statement.undo_created_body')
+                        : __('conciliation.reconciliation.actions.unlink_body'))
                     ->action(fn (ReconciliationLink $record) => $this->unlink($record->id)),
                 $this->authorizationDetailsAction(),
                 $this->paymentDetailsAction(),

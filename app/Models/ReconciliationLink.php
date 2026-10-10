@@ -87,6 +87,16 @@ class ReconciliationLink extends Model
     }
 
     /**
+     * An authorization created in the reconciliation exists only for its payment: undoing its
+     * single link removes the authorization too.
+     */
+    public function undoingDeletesTheAuthorization(): bool
+    {
+        return $this->authorization->isCreatedInReconciliation()
+            && ($this->authorization->state?->links_count ?? 0) <= 1;
+    }
+
+    /**
      * @return BelongsTo<User, $this>
      */
     public function decider(): BelongsTo
